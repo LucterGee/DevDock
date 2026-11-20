@@ -4,15 +4,15 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## 项目概述
 
-DevMaster 是一个基于 Electron 33 + Vue 3 + Express 5 的跨平台桌面开发管理工具。用于可视化管理本地项目、执行脚本、监控进程资源、集成 AI 辅助功能。
+terminalManage 是一个基于 Electron 33 + Vue 3 + Express 5 的跨平台桌面开发管理工具。用于可视化管理本地项目、执行脚本、监控进程资源、集成 AI 辅助功能。
 
 ## 常用命令
 
 ```bash
-# 开发模式（同时启动 server:3000 + client:2118）
+# 开发模式（同时启动 server:2117 + client:2118）
 npm run dev
 
-# 仅启动后端（带 --watch 自动重载）
+# 仅启动后端（固定监听 2117，无自动重载）
 npm run server
 
 # 仅启动前端
@@ -28,7 +28,7 @@ npm start
 npm run dist
 ```
 
-**注意：** 项目无测试套件，无 ESLint 配置。
+**注意：** 项目无 ESLint 配置。单元测试为 `node:test` 脚本（`server/utils/*.test.js`），需直接 `node --test <file>` 执行，根 `package.json` 未提供 `test` 脚本。
 
 ## 架构
 
@@ -36,12 +36,12 @@ npm run dist
 
 ```
 main.js (Electron 主进程)
-  ├── server/index.js (Express 后端，端口自动分配)
+  ├── server/index.js (Express 后端，Electron 内嵌时端口自动分配)
   └── client/dist/ (Vue 3 前端，生产环境由 Express 静态托管)
 ```
 
 - **Electron 主进程** (`main.js`)：创建 BrowserWindow，启动内嵌 Express 服务器，端口使用 `0` 自动分配可用端口。
-- **开发模式**下前端独立运行在 2118 端口，通过 Socket.io 连接后端 3000 端口。
+- **开发模式**下前端独立运行在 2118 端口，通过 Socket.io 连接后端 2117 端口（`client/src/utils/socket.ts` 中硬编码，改端口需同步改 `server/index.js` 的 `listen`）。
 
 ### 前后端通信
 
@@ -51,20 +51,20 @@ main.js (Electron 主进程)
 - `scan-dir` / `open-folder-dialog` — 项目扫描与目录选择
 - `start-task` / `stop-task` — 脚本执行与进程管理
 - `git:get-diff` / `git:commit` — Git 操作
-- `config:load` / `config:save` — 持久化配置（存储于 `~/.devmaster-config.json`）
-- `proxy:Codex` — AI 代理请求
+- `config:load` / `config:save` — 持久化配置（存储于 `~/.terminalManage-config.json`）
+- `proxy:claude` — AI 代理请求
 - `monitor:update` — 进程资源监控广播（每 2 秒）
 
 ### 后端核心 (`server/index.js`)
 
 单文件服务器，职责：
 1. **项目扫描**：递归扫描目录查找 `package.json`（深度限制 4 层），自动检测包管理器（npm/pnpm/yarn）
-2. **进程管理**：通过 `node-pty` 启动子进程，用 `pidusage` + `pidtree` 监控资源
+2. **进程管理**：通过 `child_process.spawn` 启动子进程（`server/package.json` 里的 `node-pty-prebuilt-multiarch` 未被任何代码引用），用 `pidusage` + `pidtree` 监控资源
 3. **Git 操作**：执行 `git diff`、`git status`、`git commit`
 4. **AI 集成**：代理转发请求至 OpenAI 兼容 API
 5. **静态文件服务**：生产环境托管 `client/dist/`
 
-跨平台进程终止：Windows 用 `taskkill /pid /T /F`，Unix 用 `SIGKILL`。
+跨平台进程终止：Windows 用 `taskkill /pid <pid> /f /t`，Unix 用 `process.kill(-pid, 'SIGKILL')` 杀整个进程组。
 
 ### 前端核心 (`client/src/`)
 
