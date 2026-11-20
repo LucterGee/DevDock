@@ -399,6 +399,14 @@ const handleRunCommand = ({ project, command }) => {
   })
 }
 
+const handleOpenTerminal = (projectPath) => {
+  socket.emit('open-terminal', projectPath, ({ success, error }) => {
+    if (!success) {
+      window.$toast?.warning?.(error || '打开终端失败');
+    }
+  })
+}
+
 const handleStopCommand = (p) => {
   socket.emit('project:stop-command', {
     projectPath: p.path
@@ -490,7 +498,7 @@ const toggleHide = (p) => {
         @run-command="handleRunCommand"
         @stop-command="handleStopCommand"
         @open-folder="(path) => socket.emit('open-project-folder', path)"
-        @open-terminal="(path) => socket.emit('open-terminal', path)"
+        @open-terminal="handleOpenTerminal"
         @open-file="(uri) => socket.emit('open-file', uri)"
         @toggle-hide="toggleHide"
         @toggle-mini-program="handleMiniProgramToggle"

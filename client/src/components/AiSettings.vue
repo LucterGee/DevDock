@@ -531,6 +531,38 @@
                   </p>
                 </div>
 
+                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526]">
+                  <label class="block mb-2 text-sm font-medium text-white">打开终端</label>
+                  <p class="mb-3 text-[11px] text-gray-500">
+                    项目卡片上的终端按钮会用它打开项目目录。当前平台：<span class="font-mono text-gray-300">{{ serverPlatform || '检测中' }}</span>
+                  </p>
+                  <select
+                    :value="activeTerminalConfig.preset"
+                    @change="updateTerminalPreset($event.target.value)"
+                    class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none transition"
+                  >
+                    <option
+                      v-for="preset in terminalPresets"
+                      :key="preset.id"
+                      :value="preset.id"
+                    >
+                      {{ preset.label }}{{ preset.available === false ? '（未检测到）' : '' }}
+                    </option>
+                    <option value="custom">自定义…</option>
+                  </select>
+                  <input
+                    v-if="activeTerminalConfig.preset === 'custom'"
+                    :value="activeTerminalConfig.customApp"
+                    @input="updateTerminalCustomApp($event.target.value)"
+                    type="text"
+                    :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\Program Files\Alacritty\alacritty.exe' : '应用名称或 .app 路径，例如 iTerm 或 /Applications/iTerm.app'"
+                    class="w-full mt-2 bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none transition"
+                  >
+                  <p class="mt-2 text-[11px] text-gray-500">
+                    选择后立即生效，以新窗口打开项目目录。标注「未检测到」的终端仍可选中，启动失败会回退或提示。
+                  </p>
+                </div>
+
                 <div class="text-xs text-gray-500">
                   输入后会自动保存到本地配置文件，当前平台未配置时，小程序项目上的微信开发者工具按钮会保持禁用状态。
                 </div>
@@ -566,6 +598,7 @@ const {
   activeConfig,
   tunnelConfig,
   wechatDevtoolsConfig,
+  terminalConfig,
   countdownReminderConfig,
   addConfig,
   updateConfig,
@@ -598,6 +631,40 @@ const tunnelState = ref({
   activeTarget: null,
   cloudflaredRunning: false
 });
+
+// --- 终端设置 ---
+const terminalPresets = ref([]);
+const serverPlatform = ref('');
+
+const activeTerminalKey = computed(() => {
+  if (serverPlatform.value === 'darwin') return 'darwin';
+  if (serverPlatform.value === 'win32') return 'win32';
+  return 'linux';
+});
+
+// 兜底对象：即使配置缺失也保证模板能读到 preset / customApp，避免渲染期崩溃
+const activeTerminalConfig = computed(() => {
+  const config = terminalConfig.value || {};
+  return config[activeTerminalKey.value] || { preset: 'custom', customApp: '' };
+});
+
+const applyTerminalPresets = (payload) => {
+  if (!payload) return;
+  serverPlatform.value = payload.platform || '';
+  terminalPresets.value = Array.isArray(payload.presets) ? payload.presets : [];
+};
+
+const loadTerminalPresets = () => {
+  socket.emit('terminal:get-presets', applyTerminalPresets);
+};
+
+const updateTerminalPreset = (value) => {
+  activeTerminalConfig.value.preset = value;
+};
+
+const updateTerminalCustomApp = (value) => {
+  activeTerminalConfig.value.customApp = value;
+};
 
 // 全局默认模型名称（用于场景配置的下拉提示）
 const globalModelName = computed(() => activeConfig.value?.name || '未配置');
@@ -768,6 +835,7 @@ onMounted(() => {
   socket.on('app:update:state', applyAppUpdateState);
   socket.emit('tunnel:get-state', handleTunnelState);
   socket.emit('app:update:get-state', applyAppUpdateState);
+  loadTerminalPresets();
 });
 
 onUnmounted(() => {

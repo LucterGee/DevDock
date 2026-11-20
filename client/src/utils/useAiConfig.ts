@@ -12,6 +12,7 @@ const STORAGE_KEY_ACTIVE = 'ai_active_id';
 const STORAGE_KEY_SCENES = 'ai_scene_configs';
 const STORAGE_KEY_TUNNEL = 'ai_tunnel_config';
 const STORAGE_KEY_WECHAT_DEVTOOLS = 'wechat_devtools_config';
+const STORAGE_KEY_TERMINAL = 'terminal_config';
 const STORAGE_KEY_COUNTDOWN_REMINDER = 'countdown_reminder_config';
 
 const DEFAULT_CONFIG: any = {
@@ -37,6 +38,22 @@ const tunnelConfig = ref({
 const wechatDevtoolsConfig = ref({
   windowsPath: '',
   macosPath: ''
+});
+
+export type TerminalPlatformConfig = { preset: string; customApp: string };
+
+const normalizeTerminalPlatform = (input: any, fallbackPreset: string): TerminalPlatformConfig => {
+  const source = input && typeof input === 'object' ? input : {};
+  return {
+    preset: typeof source.preset === 'string' && source.preset ? source.preset : fallbackPreset,
+    customApp: typeof source.customApp === 'string' ? source.customApp : ''
+  };
+};
+
+const terminalConfig = ref({
+  darwin: { preset: 'terminal', customApp: '' } as TerminalPlatformConfig,
+  win32: { preset: 'cmd', customApp: '' } as TerminalPlatformConfig,
+  linux: { preset: 'auto', customApp: '' } as TerminalPlatformConfig
 });
 const countdownReminderConfig = ref<CountdownReminderConfig>({
   ...DEFAULT_COUNTDOWN_REMINDER_CONFIG
@@ -92,6 +109,16 @@ const init = () => {
   socket.emit('config:load', STORAGE_KEY_COUNTDOWN_REMINDER, (data: any) => {
     countdownReminderConfig.value = normalizeCountdownReminderConfig(data);
   });
+
+  socket.emit('config:load', STORAGE_KEY_TERMINAL, (data: any) => {
+    if (data && typeof data === 'object') {
+      terminalConfig.value = {
+        darwin: normalizeTerminalPlatform(data.darwin, 'terminal'),
+        win32: normalizeTerminalPlatform(data.win32, 'cmd'),
+        linux: normalizeTerminalPlatform(data.linux, 'auto')
+      };
+    }
+  });
 };
 
 // 立即启动加载
@@ -126,6 +153,12 @@ watch(tunnelConfig, (newVal) => {
 watch(wechatDevtoolsConfig, (newVal) => {
   if (isLoaded.value) {
     socket.emit('config:save', { key: STORAGE_KEY_WECHAT_DEVTOOLS, value: newVal });
+  }
+}, { deep: true });
+
+watch(terminalConfig, (newVal) => {
+  if (isLoaded.value) {
+    socket.emit('config:save', { key: STORAGE_KEY_TERMINAL, value: newVal });
   }
 }, { deep: true });
 
@@ -179,6 +212,7 @@ export function useAiConfig() {
     sceneConfigs,
     tunnelConfig,
     wechatDevtoolsConfig,
+    terminalConfig,
     countdownReminderConfig,
     getSceneConfig,
     addConfig,

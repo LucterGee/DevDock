@@ -6,13 +6,19 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { spawn, exec } = require('child_process');
+const { spawn, exec, execFile } = require('child_process');
 
 const monitor = require('./utils/monitor');
 const nodeVersions = require('./utils/nodeVersions');
 const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveCommandExecution } = require('./utils/commandExecution');
+const {
+  TERMINAL_CONFIG_KEY,
+  normalizeTerminalConfig,
+  getTerminalPresets,
+  resolveTerminalCandidates,
+} = require('./utils/terminalLauncher');
 const { createWeeklyReportRuntime } = require('./services/weeklyReport/runtime');
 const { discoverAuthors, collectActivity, runGit } = require('./services/weeklyReport/gitActivity');
 const { buildReportContext } = require('./services/weeklyReport/reportContext');
@@ -1380,24 +1386,41 @@ if ($folder) { $folder.Self.Path }
     }
   });
 
-  // --- 在项目路径下打开系统终端 ---
-  socket.on('open-terminal', (projectPath) => {
+  // --- 在项目路径下打开终端（终端类型由设置中的 terminal_config 决定）---
+  socket.on('open-terminal', (projectPath, callback) => {
+    const respond = typeof callback === 'function' ? callback : () => {};
     console.log('💻 请求打开终端:', projectPath);
-    if (!projectPath) return;
 
-    let cmd;
-    if (process.platform === 'win32') {
-      cmd = `start cmd /K "cd /d "${projectPath}""`;
-    } else if (process.platform === 'darwin') {
-      cmd = `open -a Terminal "${projectPath}"`;
-    } else {
-      cmd = `x-terminal-emulator --working-directory="${projectPath}" || gnome-terminal --working-directory="${projectPath}"`;
+    const config = normalizeTerminalConfig(readConfigFile()[TERMINAL_CONFIG_KEY]);
+    const resolved = resolveTerminalCandidates(config, process.platform, projectPath);
+    if (!resolved.success) {
+      respond({ success: false, error: resolved.error });
+      return;
     }
 
-    exec(cmd, (err) => {
-      if (err) {
-        console.error('打开终端失败:', err);
+    const tryCandidate = (index) => {
+      if (index >= resolved.candidates.length) {
+        respond({ success: false, error: '未找到可用的终端，请在设置 → 开发工具中重新选择' });
+        return;
       }
+
+      const { command, args } = resolved.candidates[index];
+      execFile(command, args, { windowsHide: true }, (err) => {
+        if (err) {
+          tryCandidate(index + 1);
+          return;
+        }
+        respond({ success: true, command });
+      });
+    };
+
+    tryCandidate(0);
+  });
+
+  socket.on('terminal:get-presets', (callback) => {
+    callback?.({
+      platform: process.platform,
+      presets: getTerminalPresets(process.platform)
     });
   });
 
@@ -1517,6 +1540,8 @@ if ($folder) { $folder.Self.Path }
       value = normalizeWechatDevtoolsConfig(value);
     } else if (key === PROJECT_TAGS_BY_PATH_KEY) {
       value = normalizeProjectTagsByPath(value);
+    } else if (key === TERMINAL_CONFIG_KEY) {
+      value = normalizeTerminalConfig(value);
     }
     console.log(`📖 读取配置 [${key}]`);
     callback(value); // ✅ 发回前端
@@ -1530,6 +1555,8 @@ if ($folder) { $folder.Self.Path }
       normalizedValue = normalizeWechatDevtoolsConfig(value);
     } else if (key === PROJECT_TAGS_BY_PATH_KEY) {
       normalizedValue = normalizeProjectTagsByPath(value);
+    } else if (key === TERMINAL_CONFIG_KEY) {
+      normalizedValue = normalizeTerminalConfig(value);
     }
     allData[key] = normalizedValue; // 更新对应的 key
     writeConfigFile(allData); // 写入硬盘
