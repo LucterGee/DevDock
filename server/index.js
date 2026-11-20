@@ -11,8 +11,6 @@ const { spawn, exec } = require('child_process');
 const monitor = require('./utils/monitor');
 const nodeVersions = require('./utils/nodeVersions');
 const appUpdater = require('./utils/appUpdater');
-const diskCleaner = require('./utils/diskCleaner');
-const { openWindowsDiskCleanup } = require('./utils/windowsDiskCleanup');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveCommandExecution } = require('./utils/commandExecution');
 const { createWeeklyReportRuntime } = require('./services/weeklyReport/runtime');
@@ -145,29 +143,6 @@ const emitCommandStatus = (projectPath, projectName, running, command = '') => {
     running,
     command
   });
-};
-
-const getDiskCleanerEnvironment = () => {
-  let userData = '';
-  try {
-    const electron = require('electron');
-    if (electron?.app && typeof electron.app.getPath === 'function') {
-      userData = electron.app.getPath('userData');
-    }
-  } catch (_) {
-    // The standalone server has no Electron userData cache.
-  }
-
-  return {
-    platform: process.platform,
-    localAppData: process.env.LOCALAPPDATA || '',
-    appData: process.env.APPDATA || '',
-    programFiles: process.env.ProgramW6432 || process.env.ProgramFiles || '',
-    programFilesX86: process.env['ProgramFiles(x86)'] || '',
-    programData: process.env.ProgramData || '',
-    tempDir: os.tmpdir(),
-    userData,
-  };
 };
 
 const formatCommandLogChunk = (chunk) => {
@@ -1653,49 +1628,6 @@ if ($folder) { $folder.Self.Path }
     } catch (err) {
       console.error('系统通知发送失败:', err);
       callback({ success: false, error: '系统通知发送失败' });
-    }
-  });
-
-  socket.on('disk-cleaner:scan', async (_payload = {}, callback = () => {}) => {
-    try {
-      const environment = getDiskCleanerEnvironment();
-      const [scan, driveResult] = await Promise.all([
-        diskCleaner.scanSafeCategories({
-          environment,
-          platform: environment.platform,
-        }),
-        diskCleaner.getDriveSpace('C:\\')
-          .then((drive) => ({ drive, driveError: '' }))
-          .catch((error) => ({
-            drive: null,
-            driveError: error.message || '无法读取 C 盘容量',
-          })),
-      ]);
-      callback({ success: true, ...scan, ...driveResult });
-    } catch (error) {
-      callback({ success: false, error: error.message || '扫描失败' });
-    }
-  });
-
-  socket.on('disk-cleaner:open-windows-cleanup', async (_payload = {}, callback = () => {}) => {
-    try {
-      const result = await openWindowsDiskCleanup({ platform: process.platform });
-      callback(result);
-    } catch (error) {
-      callback({ success: false, error: error.message || '无法打开 Windows 磁盘清理' });
-    }
-  });
-
-  socket.on('disk-cleaner:clean', async ({ categoryIds } = {}, callback = () => {}) => {
-    try {
-      const environment = getDiskCleanerEnvironment();
-      const result = await diskCleaner.cleanSafeCategories(categoryIds, {
-        environment,
-        platform: environment.platform,
-      });
-      callback(result);
-    } catch (error) {
-      callback({ success: false, error: error.message || '清理失败' });
     }
   });
 
