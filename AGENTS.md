@@ -90,6 +90,6 @@ main.js (Electron 主进程)
 ## CI/CD
 
 GitHub Actions（`.github/workflows/build.yml`）：
-- 触发：push 到 main 或 `v*` tag
+- 触发：仅推送 `v*` tag 或手动 `workflow_dispatch`（push 到 main 不会触发）
 - 矩阵构建：Windows + macOS
 - 产出：上传至 GitHub Releases
