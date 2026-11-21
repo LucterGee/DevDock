@@ -1833,6 +1833,15 @@ if ($folder) { $folder.Self.Path }
 
   socket.on('nginx:overview', (callback) => nginxGuard(callback, () => nginxRuntime.overview()));
 
+  socket.on('nginx:export', (callback) => nginxGuard(callback, () => nginxRuntime.exportPayload()));
+
+  socket.on('nginx:import-json', ({ payload }, callback) => nginxGuard(callback, () => {
+    const result = nginxRuntime.importPayload(payload);
+    if (!result.ok) throw new Error(result.error);
+    nginxRuntime.apply();
+    return result;
+  }));
+
   socket.on('nginx:import', ({ text, confPath }, callback) => nginxGuard(callback, () => {
     const content = typeof text === 'string' ? text : fs.readFileSync(confPath, 'utf-8');
     const result = nginxRuntime.importFromText(content);

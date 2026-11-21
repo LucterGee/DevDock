@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import { Download, FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import RouteEditor from './RouteEditor.vue'
 import {
   nginxCall,
@@ -209,6 +209,62 @@ const runAction = (event: 'nginx:validate' | 'nginx:reload' | 'nginx:start' | 'n
   await load()
 })
 
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const pickImportFile = () => {
+  fileInput.value?.click()
+}
+
+const onImportFile = (event: Event) => run(async () => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  let payload: any
+  try {
+    payload = JSON.parse(await file.text())
+  } catch (error: any) {
+    window.$toast?.error?.('文件不是有效的 JSON')
+    return
+  }
+
+  if (!payload || payload.format !== 'devdock-nginx') {
+    window.$toast?.error?.('文件格式不符：缺少 format=devdock-nginx 标识')
+    return
+  }
+
+  const incomingRoutes = Array.isArray(payload.routes) ? payload.routes.length : 0
+  const incomingVariables = Array.isArray(payload.variables) ? payload.variables.length : 0
+  const currentVariables = (nginxSettings.value?.variables || []).length
+  const ok = await window.$confirm(
+    '导入将覆盖当前 ' + routes.value.length + ' 条路由、' + currentVariables +
+      ' 个变量，替换为文件中的 ' + incomingRoutes + ' 条路由、' + incomingVariables +
+      ' 个变量。此操作不可撤销。',
+    '导入配置',
+    { type: 'warning', confirmText: '覆盖导入' }
+  )
+  if (!ok) return
+
+  const result = await nginxCall<{ imported: number }>('nginx:import-json', { payload })
+  window.$toast?.success?.('已导入 ' + result.imported + ' 条路由')
+  selectedId.value = ''
+  await load()
+})
+
+const exportConfig = () => run(async () => {
+  const payload = await nginxCall<any>('nginx:export')
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = 'devdock-nginx-' + stamp + '.json'
+  anchor.click()
+  URL.revokeObjectURL(url)
+  window.$toast?.success?.('已导出 ' + (payload.routes || []).length + ' 条路由')
+})
+
 const submitImport = () => run(async () => {
   if (!importText.value.trim()) return
   const result = await nginxCall<NginxImportResult>('nginx:import', { text: importText.value })
@@ -347,10 +403,23 @@ onMounted(() => run(load))
           </button>
           <button
             class="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
-            @click="importOpen = true"
+            @click="pickImportFile"
           >
             <Upload class="h-3.5 w-3.5" />导入配置
           </button>
+          <button
+            class="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
+            @click="exportConfig"
+          >
+            <Download class="h-3.5 w-3.5" />导出配置
+          </button>
+          <button
+            class="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-gray-400 transition hover:border-gray-500 hover:bg-surface-hover"
+            @click="importOpen = true"
+          >
+            <FileText class="h-3.5 w-3.5" />从 nginx.conf 导入
+          </button>
+          <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onImportFile" />
         </div>
       </aside>
 
@@ -442,7 +511,7 @@ onMounted(() => run(load))
     <div v-if="importOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="importOpen = false">
       <div class="w-full max-w-2xl overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
         <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
-          <h3 class="text-sm font-semibold text-gray-100">导入配置</h3>
+          <h3 class="text-sm font-semibold text-gray-100">从 nginx.conf 导入</h3>
           <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="importOpen = false"><X class="h-4 w-4" /></button>
         </div>
         <div class="space-y-3 p-4">

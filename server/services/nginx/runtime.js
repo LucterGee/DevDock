@@ -6,6 +6,9 @@ const { findMissingVariables } = require('./variables');
 
 const sortRoutes = (routes) => [...routes].sort((a, b) => String(a.path).localeCompare(String(b.path)));
 
+const EXPORT_FORMAT = 'devdock-nginx';
+const EXPORT_VERSION = 1;
+
 const createNginxRuntime = (options = {}) => {
   const store = options.store || createNginxStore();
   const controller = options.controller || createNginxController({ store });
@@ -128,6 +131,70 @@ const createNginxRuntime = (options = {}) => {
     return { added, updated, total: locations.length };
   };
 
+  // 导出：固定格式标识与版本，结构不符的文件在导入时会被拒绝
+  const exportPayload = () => {
+    const current = state();
+    return {
+      format: EXPORT_FORMAT,
+      version: EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      variables: (current.nginx && current.nginx.variables) || [],
+      routes: current.routes || [],
+    };
+  };
+
+  const validateImportPayload = (payload) => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return '文件内容不是有效的 JSON 对象';
+    if (payload.format !== EXPORT_FORMAT) return 'format 字段必须是 ' + EXPORT_FORMAT;
+    if (Number(payload.version) !== EXPORT_VERSION) return '不支持的版本：' + String(payload.version);
+    if (!Array.isArray(payload.routes)) return 'routes 字段必须是数组';
+    if (payload.variables != null && !Array.isArray(payload.variables)) return 'variables 字段必须是数组';
+
+    for (const route of payload.routes) {
+      if (!route || typeof route !== 'object') return '存在无效的路由条目';
+      if (typeof route.path !== 'string' || !route.path.trim()) return '存在缺少 path 的路由条目';
+      if (!Array.isArray(route.targets)) return '路由 ' + route.path + ' 缺少 targets 数组';
+      for (const target of route.targets) {
+        if (!target || typeof target.proxyPass !== 'string') return '路由 ' + route.path + ' 存在缺少 proxyPass 的目标';
+      }
+    }
+    return '';
+  };
+
+  // 导入：整体覆盖现有路由与变量
+  const importPayload = (payload) => {
+    const error = validateImportPayload(payload);
+    if (error) return { ok: false, error };
+
+    const current = state();
+    const routes = payload.routes.map((route, index) => ({
+      id: route.id || slugify(route.path) + '-' + (index + 1),
+      path: route.path,
+      note: route.note || '',
+      enabled: route.enabled !== false,
+      kind: route.kind === 'raw' ? 'raw' : 'proxy',
+      activeTargetId: route.activeTargetId || (route.targets[0] && route.targets[0].id) || '',
+      targets: route.targets,
+      headers: {
+        httpVersion: Boolean(route.headers && route.headers.httpVersion),
+        host: Boolean(route.headers && route.headers.host),
+        upgrade: Boolean(route.headers && route.headers.upgrade),
+        connection: Boolean(route.headers && route.headers.connection),
+      },
+      others: Array.isArray(route.others) ? route.others : [],
+      rawBody: route.rawBody || '',
+      managed: true,
+    }));
+
+    save({
+      ...current,
+      nginx: { ...current.nginx, variables: payload.variables || [] },
+      routes,
+    });
+
+    return { ok: true, imported: routes.length, variables: (payload.variables || []).length };
+  };
+
   // 把状态落到磁盘：写配置 + 同步路由文件
   const apply = (options2 = {}) => {
     const current = state();
@@ -172,6 +239,9 @@ const createNginxRuntime = (options = {}) => {
     controller,
     overview,
     importFromText,
+    exportPayload,
+    importPayload,
+    validateImportPayload,
     upsertRoute,
     removeRoute,
     setEnabled,
@@ -188,4 +258,4 @@ const createNginxRuntime = (options = {}) => {
   };
 };
 
-module.exports = { createNginxRuntime, sortRoutes };
+module.exports = { createNginxRuntime, sortRoutes, EXPORT_FORMAT, EXPORT_VERSION };
