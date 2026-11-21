@@ -61,7 +61,7 @@ const toggleRepository = async (repository: Repository) => {
 }
 
 const removeRepository = async (repository: Repository) => {
-  const ok = await window.$confirm(`确定移除仓库「${repository.name}」？`, '移除仓库', {
+  const ok = await window.$confirm(`确定从列表中移除「${repository.name}」？`, '从列表移除', {
     type: 'warning',
     confirmText: '移除'
   })
