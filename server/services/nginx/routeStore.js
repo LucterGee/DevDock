@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { generateLocationBlock } = require('./generator');
 
 const HEADER_MARK = '# devdock:generated';
+const HEADER_END = '# devdock:header-end';
 const DEFAULT_PREFIX_DIR = path.join(os.homedir(), '.devdock', 'nginx');
 const DEFAULT_ROUTE_DIR = path.join(DEFAULT_PREFIX_DIR, 'routes');
 const DEFAULT_LOG_DIR = path.join(DEFAULT_PREFIX_DIR, 'logs');
@@ -51,12 +52,25 @@ const routeFileName = (route) => String(route.id || 'route').replace(/[^a-zA-Z0-
 const buildFileContent = (route) => {
   const body = generateLocationBlock(route);
   const hash = sha256(body);
-  return [HEADER_MARK, '# id: ' + route.id, '# hash: ' + hash, '', body, ''].join('\n');
+  // 正文可能以注释开头（路由备注），因此文件头必须有显式结束标记，
+  // 不能靠「以 # 开头」来切分
+  return [HEADER_MARK, '# id: ' + route.id, '# hash: ' + hash, HEADER_END, '', body, ''].join('\n');
 };
 
 // 把文件拆成「头部注释块」和「正文」
 const splitHeader = (content) => {
   const lines = String(content || '').split(/\r?\n/);
+  const endIndex = lines.findIndex((line) => line.trim() === HEADER_END);
+  if (endIndex >= 0) {
+    let bodyStart = endIndex + 1;
+    while (bodyStart < lines.length && !lines[bodyStart].trim()) bodyStart += 1;
+    return {
+      header: lines.slice(0, endIndex + 1).join('\n'),
+      body: lines.slice(bodyStart).join('\n').trim(),
+    };
+  }
+
+  // 兼容没有结束标记的旧文件
   let index = 0;
   while (index < lines.length && (lines[index].startsWith('#') || !lines[index].trim())) index += 1;
   return {
@@ -209,6 +223,7 @@ module.exports = {
   routeFileName,
   writeFileAtomic,
   HEADER_MARK,
+  HEADER_END,
   DEFAULT_PREFIX_DIR,
   DEFAULT_ROUTE_DIR,
   DEFAULT_PORT,
