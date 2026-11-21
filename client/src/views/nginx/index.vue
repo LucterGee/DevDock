@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { Download, FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { Braces, Download, FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import RouteEditor from './RouteEditor.vue'
+import VariablesDialog from './VariablesDialog.vue'
 import {
   nginxCall,
   type NginxActionResult,
@@ -267,15 +268,6 @@ const exportConfig = () => run(async () => {
 })
 
 
-const variableListRef = ref<HTMLElement | null>(null)
-
-const addVariable = async () => {
-  settingsDraft.value.variables.push({ name: '', value: '' })
-  await nextTick()
-  const list = variableListRef.value
-  if (list) list.scrollTop = list.scrollHeight
-}
-
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
 const settingsDraft = ref({
@@ -283,8 +275,7 @@ const settingsDraft = ref({
   routesDir: '',
   logDir: '',
   accessLogEnabled: false,
-  accessLogPath: '',
-  variables: [] as NginxVariable[]
+  accessLogPath: ''
 })
 
 const openSettings = () => {
@@ -294,8 +285,7 @@ const openSettings = () => {
     routesDir: current.routesDir || '',
     logDir: current.logDir || '',
     accessLogEnabled: Boolean(current.accessLog?.enabled),
-    accessLogPath: current.accessLog?.path || '',
-    variables: (current.variables || []).map((item: NginxVariable) => ({ name: item.name || '', value: item.value || '' }))
+    accessLogPath: current.accessLog?.path || ''
   }
   settingsOpen.value = true
 }
@@ -312,14 +302,28 @@ const saveSettings = () => run(async () => {
         ...(current.accessLog || {}),
         enabled: settingsDraft.value.accessLogEnabled,
         path: settingsDraft.value.accessLogPath.trim() || current.accessLog?.path || ''
-      },
-      variables: settingsDraft.value.variables
-        .map((item) => ({ name: item.name.trim(), value: item.value.trim() }))
-        .filter((item) => item.name)
+      }
     }
   })
   window.$toast?.success?.('设置已保存')
   settingsOpen.value = false
+  await load()
+})
+
+const variablesOpen = ref(false)
+
+const saveVariables = (next: NginxVariable[]) => run(async () => {
+  const current = nginxSettings.value || {}
+  await nginxCall('nginx:settings:save', {
+    nginx: {
+      ...current,
+      variables: next
+        .map((item) => ({ name: item.name.trim(), value: item.value.trim() }))
+        .filter((item) => item.name)
+    }
+  })
+  window.$toast?.success?.('变量已保存')
+  variablesOpen.value = false
   await load()
 })
 
@@ -354,6 +358,10 @@ onMounted(() => run(load))
         </button>
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy || !canStop" @click="runAction('nginx:stop')">
           <Square class="h-3.5 w-3.5" />停止
+        </button>
+        <button class="relative flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="variablesOpen = true">
+          <Braces class="h-3.5 w-3.5" />变量
+          <span v-if="missingVariables.length" class="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
         </button>
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="openSettings">
           <Settings class="h-3.5 w-3.5" />设置
@@ -521,35 +529,6 @@ onMounted(() => run(load))
           </label>
 
           <div class="border-t border-gray-700 pt-4">
-            <div ref="variableListRef" class="max-h-44 space-y-2 overflow-y-auto pr-1">
-              <div v-for="(variable, index) in settingsDraft.variables" :key="index" class="flex items-center gap-2">
-                <input
-                  v-model="variable.name"
-                  class="w-32 shrink-0 rounded border border-gray-700 bg-surface-sunken px-2 py-1.5 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-                  placeholder="变量名"
-                />
-                <input
-                  v-model="variable.value"
-                  class="min-w-0 flex-1 rounded border border-gray-700 bg-surface-sunken px-2 py-1.5 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-                  placeholder="值"
-                />
-                <button
-                  class="shrink-0 rounded p-1 text-gray-500 transition hover:bg-surface-hover hover:text-red-400"
-                  title="删除变量"
-                  @click="settingsDraft.variables.splice(index, 1)"
-                ><X class="h-3.5 w-3.5" /></button>
-              </div>
-            </div>
-            <button
-              class="mt-2 flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
-              @click="addVariable"
-            >
-              <Plus class="h-3.5 w-3.5" />新增变量
-            </button>
-            <p v-if="missingVariables.length" class="mt-2 font-mono text-[11px] text-blue-400">未定义：{{ missingVariables.join(', ') }}</p>
-          </div>
-
-          <div class="border-t border-gray-700 pt-4">
             <label class="block">
               <span class="mb-1 block text-xs text-gray-400">路由目录</span>
               <div class="flex gap-2">
@@ -594,6 +573,15 @@ onMounted(() => run(load))
         </div>
       </div>
     </div>
+
+    <VariablesDialog
+      v-if="variablesOpen"
+      :variables="variables"
+      :routes="routes"
+      :missing="missingVariables"
+      @save="saveVariables"
+      @close="variablesOpen = false"
+    />
 
     <RouteEditor
       v-if="editorOpen && editorRoute"
