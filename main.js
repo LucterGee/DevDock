@@ -58,7 +58,7 @@ function getFallbackErrorPage(errorMessage) {
   const safeMessage = String(errorMessage || 'Unknown error').replace(/</g, '&lt;');
   return `data:text/html;charset=UTF-8,${encodeURIComponent(
     `<html><body style="font-family: sans-serif; padding: 24px; background: #111827; color: #e5e7eb;">
-      <h2>terminalManage 启动失败</h2>
+      <h2>DevDock 启动失败</h2>
       <p>无法连接到内置服务，请重启应用后重试。</p>
       <pre style="white-space: pre-wrap; color: #fca5a5;">${safeMessage}</pre>
     </body></html>`
@@ -102,7 +102,7 @@ function ensureServerUrl() {
         return;
       }
       appBaseUrl = `http://localhost:${port}`;
-      console.log(`🚀 terminalManage 已启动，自动分配端口: ${port}`);
+      console.log(`🚀 DevDock 已启动，自动分配端口: ${port}`);
       resolve(appBaseUrl);
     };
 
@@ -150,7 +150,7 @@ function createTray() {
   if (tray) return;
 
   tray = new Tray(resolveAppIconPath());
-  tray.setToolTip('terminalManage');
+  tray.setToolTip('DevDock');
 
   const trayMenu = Menu.buildFromTemplate([
     { label: '显示窗口', click: showMainWindow },
@@ -202,7 +202,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    title: "terminalManage",
+    title: "DevDock",
     icon: resolveAppIconPath(),
     autoHideMenuBar: shouldHideMenu,
     webPreferences: {

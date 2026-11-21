@@ -708,7 +708,7 @@ const currentEditId = ref(null);
 const formData = ref(null);
 const isCreating = ref(false);
 const appUpdate = ref({
-  appName: 'terminalManage',
+  appName: 'DevDock',
   currentVersion: '',
   supported: false,
   enabled: false,

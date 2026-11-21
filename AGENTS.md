@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## 项目概述
 
-terminalManage 是一个基于 Electron 33 + Vue 3 + Express 5 的跨平台桌面开发管理工具。用于可视化管理本地项目、执行脚本、监控进程资源、集成 AI 辅助功能。
+DevDock 是一个基于 Electron 33 + Vue 3 + Express 5 的跨平台桌面开发管理工具。用于可视化管理本地项目、执行脚本、监控进程资源、集成 AI 辅助功能。
 
 ## 常用命令
 
@@ -70,7 +70,7 @@ main.js (Electron 主进程)
 
 - **框架**：Vue 3 + Vue Router 4（Hash 模式，兼容 Electron）
 - **构建**：Vite（rolldown-vite）
-- **样式**：Tailwind CSS 4 + 深色主题
+- **样式**：Tailwind CSS 4，深色/浅色/跟随系统三态主题（CSS 变量驱动，见 `style.css` 与 `utils/useTheme.ts`）
 - **终端**：xterm.js 渲染进程输出
 - **Socket 连接**：`utils/socket.ts` 中根据 `import.meta.env.DEV` 判断连接地址
 - **AI 工具**：`utils/ai.ts` 提供 `callKuyepClaude()` 调用 AI API

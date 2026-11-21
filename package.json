@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "com.terminalManage.app",
-    "productName": "terminalManage",
+    "productName": "DevDock",
     "directories": {
       "output": "dist_electron"
     },
@@ -41,7 +41,7 @@
       "category": "public.app-category.developer-tools"
     },
     "dmg": {
-      "title": "terminalManage Installer"
+      "title": "DevDock Installer"
     },
     "publish": [
       {
