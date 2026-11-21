@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { socket } from '../../utils/socket'
 import { useAiConfig } from '../../utils/useAiConfig'
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown, X } from 'lucide-vue-next'
 import { defaultDateRange, groupCommits, toggleCommitSelection, toDateInput, type WeeklyReportCommit } from '../../utils/weeklyReport'
 
 type Repository = { id: string; name: string; path: string; enabled: boolean }
@@ -57,6 +57,18 @@ const toggleRepository = async (repository: Repository) => {
   try {
     await emitRequest('weekly-report:repositories:set-enabled', { id: repository.id, enabled: !repository.enabled })
     repository.enabled = !repository.enabled
+  } catch (error: any) { window.$toast?.warning?.(error.message) }
+}
+
+const removeRepository = async (repository: Repository) => {
+  const ok = await window.$confirm(`确定移除仓库「${repository.name}」？`, '移除仓库', {
+    type: 'warning',
+    confirmText: '移除'
+  })
+  if (!ok) return
+  try {
+    await emitRequest('weekly-report:repositories:remove', { id: repository.id })
+    await loadRepositories()
   } catch (error: any) { window.$toast?.warning?.(error.message) }
 }
 
@@ -172,9 +184,14 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
             <button class="rounded bg-blue-600 px-3 text-xs font-medium text-white transition hover:bg-blue-500" @click="importRoot">导入</button>
           </div>
           <div class="max-h-64 overflow-y-auto">
-            <div v-for="repository in repositories" :key="repository.id" class="flex items-center gap-2 border-t border-gray-700 py-2 text-sm">
-              <input type="checkbox" :checked="repository.enabled" @change="toggleRepository(repository)" />
-              <span class="truncate" :title="repository.path">{{ repository.name }}</span>
+            <div v-for="repository in repositories" :key="repository.id" class="flex items-center gap-2 border-t border-gray-700 py-1.5 text-sm">
+              <input type="checkbox" class="shrink-0" :checked="repository.enabled" @change="toggleRepository(repository)" />
+              <span class="min-w-0 flex-1 truncate" :title="repository.path">{{ repository.name }}</span>
+              <button
+                class="shrink-0 rounded p-1 text-gray-500 transition hover:bg-gray-700 hover:text-red-400"
+                title="移除"
+                @click="removeRepository(repository)"
+              ><X class="h-3.5 w-3.5" /></button>
             </div>
           </div>
         </section>
