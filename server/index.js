@@ -35,29 +35,6 @@ const CONFIG_PATH = path.join(os.homedir(), '.devdock-config.json');
 const WEEKLY_REPORT_STATE_PATH = path.join(os.homedir(), '.devdock-weekly-report.json');
 const WEEKLY_REPORT_CACHE_PATH = path.join(os.homedir(), '.devdock-weekly-report-cache.json');
 
-// 旧版本（terminalManage）的文件名 → 新文件名。
-// 首次启动时若新文件不存在而旧文件存在，则复制一份（旧文件保留作备份）。
-const LEGACY_FILE_RENAMES = [
-  ['.terminalManage-config.json', '.devdock-config.json'],
-  ['.terminalManage-weekly-report.json', '.devdock-weekly-report.json'],
-  ['.terminalManage-weekly-report-cache.json', '.devdock-weekly-report-cache.json']
-];
-
-const migrateLegacyFiles = () => {
-  for (const [legacyName, nextName] of LEGACY_FILE_RENAMES) {
-    const legacyPath = path.join(os.homedir(), legacyName);
-    const nextPath = path.join(os.homedir(), nextName);
-    try {
-      if (fs.existsSync(nextPath) || !fs.existsSync(legacyPath)) continue;
-      fs.copyFileSync(legacyPath, nextPath);
-      console.log("[migrate] " + legacyName + " -> " + nextName);
-    } catch (error) {
-      console.error("[migrate] 迁移 " + legacyName + " 失败:", error.message);
-    }
-  }
-};
-
-migrateLegacyFiles();
 const weeklyReportRuntime = createWeeklyReportRuntime({
   statePath: WEEKLY_REPORT_STATE_PATH,
   cachePath: WEEKLY_REPORT_CACHE_PATH

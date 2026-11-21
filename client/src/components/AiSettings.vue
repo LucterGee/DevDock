@@ -364,7 +364,7 @@
                     v-model="tunnelConfig.publicDomain"
                     type="text"
                     class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-cyan-500 focus:outline-none transition"
-                    placeholder="e.g. http://kuyep.indevs.in"
+                    placeholder="e.g. https://dev.example.com"
                   >
                 </div>
 
