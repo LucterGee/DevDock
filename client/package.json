@@ -11,6 +11,7 @@
   "dependencies": {
     "highlight.js": "^11.11.1",
     "i": "^0.3.7",
+    "lucide-vue-next": "^1.0.0",
     "markdown-it": "^14.1.1",
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.24",

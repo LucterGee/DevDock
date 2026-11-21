@@ -1,52 +1,111 @@
 @import "tailwindcss";
 
-/* --- 👇 追加以下代码 --- */
+/* ==========================================================================
+   主题系统
+   - 颜色工具类编译为 var(--color-*)，因此只需按主题重声明变量，
+     无需在每个组件上写 dark: 变体。
+   - 深色为默认值（与原配色一致）；浅色在 html.theme-light 下覆盖。
+   ========================================================================== */
 
-/* 1. 强制浏览器识别为暗黑模式 (有助于部分原生控件变黑) */
+@theme {
+  /* 语义色板：替代组件里的任意 hex 值 */
+  --color-surface: #1e1e1e;
+  --color-surface-raised: #252526;
+  --color-surface-hover: #2a2a2d;
+  --color-surface-sunken: #0f172a;
+
+  /* AI 报告 markdown 强调色：浅色下需要更深的紫/靛保证对比度 */
+  --color-markdown-heading: #c084fc;
+  --color-markdown-strong: #818cf8;
+}
+
 :root {
   color-scheme: dark;
 }
 
-/* 2. 自定义全局滚动条 (Chrome/Edge/Safari) */
+/* 浅色主题：反转 gray/slate 明度阶梯
+   原深色下 gray-900 是最暗（页面底）、gray-100 是最亮（正文），
+   反转后 bg-gray-900 变浅、text-gray-100 变深，工具类语义保持不变。 */
+html.theme-light {
+  color-scheme: light;
+
+  --color-gray-50: #020617;
+  --color-gray-100: #0f172a;
+  --color-gray-200: #1e293b;
+  --color-gray-300: #334155;
+  --color-gray-400: #64748b;
+  --color-gray-500: #64748b;
+  --color-gray-600: #cbd5e1;
+  --color-gray-700: #e2e8f0;
+  --color-gray-800: #ffffff;
+  --color-gray-900: #f1f5f9;
+  --color-gray-950: #f8fafc;
+
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #64748b;
+  --color-slate-500: #64748b;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #ffffff;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8fafc;
+  --color-surface-hover: #f1f5f9;
+  --color-surface-sunken: #f8fafc;
+
+  --color-markdown-heading: #7e22ce;
+  --color-markdown-strong: #4f46e5;
+
+  /* 浅色下 200/300/400 档强调色在浅底上对比度不足（如「Git」按钮的紫字），
+     统一加深一档；这些色只作文字/图标用，加深不影响语义。 */
+  --color-purple-300: #7e22ce;
+  --color-emerald-200: #047857;
+  --color-emerald-300: #059669;
+  --color-red-400: #b91c1c;
+  --color-cyan-200: #0e7490;
+  --color-cyan-300: #0891b2;
+  --color-amber-300: #b45309;
+  --color-green-400: #15803d;
+  --color-green-500: #16a34a;
+  --color-blue-400: #2563eb;
+  --color-yellow-500: #ca8a04;
+}
+
+/* 滚动条跟随主题 */
 ::-webkit-scrollbar {
-  width: 10px;  /* 纵向滚动条宽度 */
-  height: 10px; /* 横向滚动条高度 */
+  width: 10px;
+  height: 10px;
 }
-
-/* 滚动条轨道 (背景) - 设为透明或和背景一致 */
 ::-webkit-scrollbar-track {
-  background: #0f172a; /* 对应 Tailwind bg-slate-900 */
+  background: var(--color-surface-sunken);
 }
-
-/* 滚动条滑块 (滑块本身) */
 ::-webkit-scrollbar-thumb {
-  background: #334155; /* 对应 Tailwind bg-slate-700 */
+  background: var(--color-gray-700);
   border-radius: 5px;
-  border: 2px solid #0f172a; /* 制造一点间隙感 */
+  border: 2px solid var(--color-surface-sunken);
 }
-
-/* 鼠标悬停在滑块上 */
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569; /* 对应 Tailwind bg-slate-600 */
+  background: var(--color-gray-600);
 }
-
-/* 3. 专门针对 Xterm 终端内部的滚动条微调 */
 .xterm-viewport::-webkit-scrollbar {
   width: 12px;
 }
 .xterm-viewport::-webkit-scrollbar-track {
-  background-color: #0f172a; /* 必须和终端背景色一致，否则会有白边 */
+  background-color: var(--color-surface-sunken);
 }
 .xterm-viewport::-webkit-scrollbar-thumb {
-  background-color: #1e293b; /* 比全局稍微深一点，更低调 */
-  border: none; /* 终端里不需要圆角和边框，显得更极客 */
+  background-color: var(--color-gray-800);
+  border: none;
   border-radius: 0;
 }
 .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: #334155;
+  background-color: var(--color-gray-700);
 }
-
-/* 4. 隐藏右下角的拖拽调整大小图标 (如果出现的话) */
 ::-webkit-scrollbar-corner {
-  background: #0f172a;
+  background: var(--color-surface-sunken);
 }

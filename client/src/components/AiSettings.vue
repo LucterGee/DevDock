@@ -1,170 +1,252 @@
 <template>
   <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="$emit('close')" @keydown.esc="$emit('close')" tabindex="-1" ref="backdrop">
-    <div class="w-full max-w-3xl bg-[#1e1e1e] border border-gray-700 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[520px]">
+    <div class="w-full max-w-5xl bg-surface border border-gray-700 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[80vh] max-h-[760px]">
 
-      <div class="flex items-center justify-between p-4 border-b border-gray-700 bg-[#252526]">
-        <h3 class="flex items-center gap-2 text-lg font-bold text-white">
-          <span>⚙️</span> 全局设置
+      <div class="flex items-center justify-between p-4 border-b border-gray-700 bg-surface-raised">
+        <h3 class="flex items-center gap-2 text-lg font-bold text-gray-100">
+          <Settings class="w-5 h-5 text-gray-400" />
+          全局设置
         </h3>
-        <button @click="$emit('close')" class="px-2 text-gray-400 hover:text-white">✕</button>
+        <button @click="$emit('close')" class="px-2 text-gray-400 hover:text-gray-100">✕</button>
       </div>
 
-      <div class="flex flex-1 overflow-hidden">
+      <div class="flex flex-1 min-h-0 overflow-hidden">
 
         <!-- 左侧边栏 -->
-        <div class="w-56 border-r border-gray-700 bg-[#18181b] flex flex-col">
-          <div class="p-3 text-xs font-bold tracking-wider text-gray-500 uppercase">已保存的模型</div>
+        <div class="flex flex-col w-64 overflow-hidden border-r border-gray-700 bg-surface-sunken">
 
-          <div class="flex-1 px-2 space-y-1 overflow-y-auto">
-            <div
-              v-for="config in configList"
-              :key="config.id"
-              @click="handleSelect(config)"
-              class="flex items-center justify-between px-3 py-2.5 transition rounded cursor-pointer select-none"
-              :class="currentView === 'model' && currentEditId === config.id ? 'bg-[#37373d] text-white' : 'text-gray-400 hover:bg-[#2a2a2d]'"
-            >
-              <div class="flex flex-col overflow-hidden">
-                <span class="text-sm font-medium truncate">{{ config.name }}</span>
-                <span class="text-[10px] text-gray-500 truncate">{{ config.model }}</span>
-              </div>
+          <!-- 组一：模型 -->
+          <div class="flex flex-col flex-1 min-h-0">
+            <div class="px-4 pt-3 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">模型</div>
 
+            <div class="flex-1 min-h-0 px-2 space-y-1 overflow-y-auto">
               <div
-                v-if="activeId === config.id"
-                class="flex-shrink-0 w-2 h-2 ml-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
-                title="当前全局使用"
-              ></div>
+                v-for="config in configList"
+                :key="config.id"
+                @click="handleSelect(config)"
+                class="px-2.5 py-2 transition rounded cursor-pointer select-none"
+                :class="currentView === 'model' && currentEditId === config.id ? 'bg-surface-hover text-gray-100' : 'text-gray-400 hover:bg-surface-hover'"
+              >
+                <!-- 第一行：名称 + 全局默认标记 -->
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-medium truncate">{{ config.name }}</span>
+                  <div
+                    v-if="activeId === config.id"
+                    class="flex-shrink-0 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"
+                    title="当前全局使用"
+                  ></div>
+                </div>
+
+                <!-- 第二行：provider 徽章 + 模型名 -->
+                <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+                  <span class="flex-shrink-0 text-[9px] font-mono px-1 py-px rounded bg-gray-700/60 text-gray-300">{{ config.provider }}</span>
+                  <span class="text-[10px] font-mono text-gray-500 truncate">{{ config.model }}</span>
+                </div>
+
+                <!-- 第三行：场景徽章，或 Base URL 兜底 -->
+                <div class="flex items-center gap-1 mt-1 min-w-0">
+                  <template v-if="sceneUsage[config.id]">
+                    <span
+                      v-for="badge in sceneUsage[config.id]"
+                      :key="badge.key"
+                      class="flex items-center justify-center flex-shrink-0 w-4 h-4 text-[9px] font-bold rounded"
+                      :class="badge.tone"
+                      :title="badge.label"
+                    >{{ badge.letter }}</span>
+                  </template>
+                  <span v-else class="text-[10px] text-gray-600 truncate">{{ shortBaseURL(config.baseURL) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-2">
+              <button
+                @click="handleCreateNew"
+                class="flex items-center justify-center w-full gap-1.5 px-3 py-2 text-xs text-blue-400 transition border border-gray-600 border-dashed rounded hover:bg-blue-500/10 hover:border-blue-500"
+              >
+                <Plus class="w-3.5 h-3.5" /> 添加新模型
+              </button>
             </div>
           </div>
 
-          <!-- 场景配置入口 -->
-          <div class="px-2 py-2 border-t border-gray-700">
+          <!-- 组二：场景 -->
+          <div class="flex-shrink-0 px-2 pb-2 border-t border-gray-700">
+            <div class="px-2 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">场景</div>
             <div
               @click="showSceneView"
-              class="flex items-center gap-2 px-3 py-2.5 transition rounded cursor-pointer select-none"
-              :class="currentView === 'scene' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:bg-[#2a2a2d]'"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'scene' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:bg-surface-hover'"
             >
-              <span class="text-sm">🎯</span>
+              <Target class="w-3.5 h-3.5" />
               <span class="text-sm font-medium">场景配置</span>
             </div>
           </div>
 
-          <div class="px-2 py-2 border-t border-gray-700">
+          <!-- 组三：集成 -->
+          <div class="flex-shrink-0 px-2 pb-2 border-t border-gray-700">
+            <div class="px-2 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">集成</div>
             <div
               @click="showTunnelView"
-              class="flex items-center gap-2 px-3 py-2.5 transition rounded cursor-pointer select-none"
-              :class="currentView === 'tunnel' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-[#2a2a2d]'"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'tunnel' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">T</span>
               <span class="text-sm font-medium">Tunnel</span>
             </div>
-          </div>
-
-          <div class="px-2 py-2 border-t border-gray-700">
             <div
               @click="showToolView"
-              class="flex items-center gap-2 px-3 py-2.5 transition rounded cursor-pointer select-none"
-              :class="currentView === 'tool' ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:bg-[#2a2a2d]'"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'tool' ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">W</span>
               <span class="text-sm font-medium">开发工具</span>
             </div>
           </div>
 
-          <div class="px-2 py-2 border-t border-gray-700">
+          <!-- 组四：外观与应用 -->
+          <div class="flex-shrink-0 px-2 pb-3 border-t border-gray-700">
+            <div class="px-2 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">外观与应用</div>
+            <div
+              @click="showAppearanceView"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'appearance' ? 'bg-indigo-500/20 text-indigo-300' : 'text-gray-400 hover:bg-surface-hover'"
+            >
+              <Palette class="w-3.5 h-3.5" />
+              <span class="text-sm font-medium">外观</span>
+            </div>
             <div
               @click="showReminderView"
-              class="flex items-center gap-2 px-3 py-2.5 transition rounded cursor-pointer select-none"
-              :class="currentView === 'reminder' ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:bg-[#2a2a2d]'"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'reminder' ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:bg-surface-hover'"
             >
-              <span class="text-sm">⏱</span>
+              <Timer class="w-3.5 h-3.5" />
               <span class="text-sm font-medium">倒计时提醒</span>
             </div>
-          </div>
-
-          <div class="px-2 py-2 border-t border-gray-700">
             <div
               @click="showAppView"
-              class="flex items-center gap-2 px-3 py-2.5 transition rounded cursor-pointer select-none"
-              :class="currentView === 'app' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:bg-[#2a2a2d]'"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'app' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">U</span>
               <span class="text-sm font-medium">应用更新</span>
             </div>
           </div>
-
-          <div class="p-3 border-t border-gray-700">
-            <button
-              @click="handleCreateNew"
-              class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm text-blue-400 transition border border-gray-600 border-dashed rounded hover:bg-blue-500/10 hover:border-blue-500"
-            >
-              <span>+</span> 添加新模型
-            </button>
-          </div>
         </div>
 
         <!-- 右侧面板 -->
-        <div class="flex-1 bg-[#1e1e1e] flex flex-col">
+        <div class="flex flex-col flex-1 min-w-0 bg-surface">
 
           <!-- 模型编辑视图 -->
           <template v-if="currentView === 'model' && formData">
-            <div class="flex-1 p-6 overflow-y-auto">
-              <div class="flex items-center justify-between pb-2 mb-6 border-b border-gray-700">
-                <h4 class="text-base font-bold text-white">
-                  {{ isCreating ? '🆕 新增配置' : '✏️ 编辑配置' }}
+            <div class="flex-1 overflow-y-auto">
+              <div class="px-6 pt-5 pb-3 border-b border-gray-700">
+                <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
+                  <component :is="isCreating ? Plus : Pencil" class="w-4 h-4 text-gray-400" />
+                  {{ isCreating ? '新增配置' : '编辑配置' }}
                 </h4>
-                <button
-                  v-if="!isCreating && activeId !== formData.id"
-                  @click="setActive(formData.id)"
-                  class="px-3 py-1 text-xs text-green-400 transition border border-green-800 rounded bg-green-900/30 hover:bg-green-800"
-                >
-                  设为全局默认
-                </button>
-                <span v-else-if="activeId === formData.id" class="px-2 py-1 text-xs font-bold text-green-500 border rounded border-green-500/30 bg-green-500/10">
-                  ✅ 全局默认
-                </span>
               </div>
 
-              <div class="space-y-4">
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">显示名称 (别名)</label>
-                  <input v-model="formData.name" type="text" placeholder="例如：DeepSeek V3" class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none transition">
-                </div>
+              <div class="px-6 py-5 space-y-6">
 
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">API 协议</label>
-                  <select v-model="formData.provider" class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none transition">
-                    <option value="openai">OpenAI 兼容 (DeepSeek / GPT)</option>
-                    <option value="openai-responses">OpenAI Responses (Codex / GPT)</option>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="gemini">Google Gemini</option>
-                  </select>
-                </div>
+                <!-- 分区：基础信息 -->
+                <section>
+                  <div class="pb-1.5 mb-3 border-b border-gray-700">
+                    <h5 class="text-[11px] font-bold tracking-wider text-gray-500 uppercase">基础信息</h5>
+                  </div>
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block mb-1 text-xs text-gray-500">显示名称 (别名)</label>
+                      <input v-model="formData.name" type="text" placeholder="例如：DeepSeek V3" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none transition">
+                    </div>
 
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">Base URL (API 地址)</label>
-                  <input v-model="formData.baseURL" type="text" placeholder="https://api.deepseek.com" class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-blue-500 focus:outline-none transition">
-                </div>
+                    <div>
+                      <label class="block mb-1 text-xs text-gray-500">API 协议</label>
+                      <select v-model="formData.provider" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none transition">
+                        <option value="openai">OpenAI 兼容 (DeepSeek / GPT)</option>
+                        <option value="openai-responses">OpenAI Responses (Codex / GPT)</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="gemini">Google Gemini</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">API Key</label>
-                  <input v-model="formData.apiKey" type="password" placeholder="API Key..." class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-blue-500 focus:outline-none transition">
-                </div>
+                    <div>
+                      <label class="block mb-1 text-xs text-gray-500">Model (模型名)</label>
+                      <input v-model="formData.model" type="text" placeholder="deepseek-chat" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
+                      <p class="flex items-center gap-1 mt-1 text-[10px] text-yellow-600">
+                        <AlertTriangle class="flex-shrink-0 w-3 h-3" />
+                        模型名称以供应商实际提供的为准，可能与官方命名不同
+                      </p>
+                      <p class="text-[10px] text-gray-500 mt-1">
+                        常用:
+                        <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='deepseek-chat'">deepseek-chat</span>,
+                        <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='gpt-4o'">gpt-4o</span>,
+                        <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='claude-sonnet-4-20250514'">claude-sonnet-4</span>
+                      </p>
+                    </div>
+                  </div>
+                </section>
 
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">Model (模型名)</label>
-                  <input v-model="formData.model" type="text" placeholder="deepseek-chat" class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-blue-500 focus:outline-none transition">
-                  <p class="text-[10px] text-yellow-600 mt-1">⚠️ 模型名称以供应商实际提供的为准，可能与官方命名不同</p>
-                  <p class="text-[10px] text-gray-500 mt-1">
-                    常用:
-                    <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='deepseek-chat'">deepseek-chat</span>,
-                    <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='gpt-4o'">gpt-4o</span>,
-                    <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='claude-sonnet-4-20250514'">claude-sonnet-4</span>
-                  </p>
-                </div>
+                <!-- 分区：连接 -->
+                <section>
+                  <div class="pb-1.5 mb-3 border-b border-gray-700">
+                    <h5 class="text-[11px] font-bold tracking-wider text-gray-500 uppercase">连接</h5>
+                  </div>
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block mb-1 text-xs text-gray-500">Base URL (API 地址)</label>
+                      <input v-model="formData.baseURL" type="text" placeholder="https://api.deepseek.com" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
+                    </div>
+
+                    <div>
+                      <label class="block mb-1 text-xs text-gray-500">API Key</label>
+                      <input v-model="formData.apiKey" type="password" placeholder="API Key..." class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
+                    </div>
+                  </div>
+                </section>
+
+                <!-- 分区：使用情况 -->
+                <section>
+                  <div class="pb-1.5 mb-3 border-b border-gray-700">
+                    <h5 class="text-[11px] font-bold tracking-wider text-gray-500 uppercase">使用情况</h5>
+                  </div>
+
+                  <div class="p-4 space-y-3 border border-gray-700 rounded-lg bg-surface-raised">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="text-sm text-gray-200">全局默认模型</div>
+                        <p class="mt-0.5 text-[11px] text-gray-500">未单独指定场景的请求都会使用这个模型</p>
+                      </div>
+                      <button
+                        v-if="!isCreating && activeId !== formData.id"
+                        @click="setActive(formData.id)"
+                        class="flex-shrink-0 px-3 py-1 text-xs text-green-400 transition border border-green-800 rounded bg-green-900/30 hover:bg-green-800"
+                      >
+                        设为全局默认
+                      </button>
+                      <span v-else-if="!isCreating" class="flex items-center flex-shrink-0 gap-1 px-2 py-1 text-xs font-bold text-green-500 border rounded border-green-500/30 bg-green-500/10">
+                        <Check class="w-3 h-3" /> 全局默认
+                      </span>
+                      <span v-else class="flex-shrink-0 text-[11px] text-gray-500">保存后可设为默认</span>
+                    </div>
+
+                    <div class="pt-3 border-t border-gray-700">
+                      <div class="mb-1.5 text-sm text-gray-200">被以下场景使用</div>
+                      <div v-if="formSceneUsage.length" class="flex flex-wrap gap-1.5">
+                        <span
+                          v-for="badge in formSceneUsage"
+                          :key="badge.key"
+                          class="px-2 py-0.5 text-[11px] rounded"
+                          :class="badge.tone"
+                        >{{ badge.label }}</span>
+                      </div>
+                      <p v-else class="text-[11px] text-gray-500">未被任何场景单独指定，跟随全局默认</p>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
 
-            <div class="p-4 border-t border-gray-700 bg-[#252526] flex justify-between items-center">
+            <div class="flex items-center justify-between p-4 border-t border-gray-700 bg-surface-raised">
               <button
                 v-if="!isCreating"
                 @click="handleDelete"
@@ -176,7 +258,7 @@
               <div class="flex gap-3">
                 <button
                   @click="formData = null; currentEditId = null"
-                  class="px-4 py-2 text-xs text-gray-300 transition hover:text-white"
+                  class="px-4 py-2 text-xs text-gray-300 transition hover:text-gray-100"
                 >
                   取消
                 </button>
@@ -194,26 +276,29 @@
           <template v-else-if="currentView === 'scene'">
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
-                <h4 class="text-base font-bold text-white">🎯 场景配置</h4>
+                <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
+                  <Target class="w-4 h-4 text-purple-400" />
+                  场景配置
+                </h4>
                 <p class="mt-1 text-xs text-gray-500">为不同使用场景指定独立的 AI 模型，未指定时跟随全局默认</p>
               </div>
 
               <div class="space-y-4">
                 <!-- Git 提交 -->
-                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526] transition hover:border-gray-600">
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised transition hover:border-gray-600">
                   <div class="flex items-start gap-3">
                     <div class="flex items-center justify-center flex-shrink-0 text-lg text-orange-400 rounded-lg w-9 h-9 bg-orange-500/15">
                       G
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm font-medium text-white">Git 提交消息</span>
+                        <span class="text-sm font-medium text-gray-100">Git 提交消息</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400/80">git commit</span>
                       </div>
                       <p class="mb-3 text-xs text-gray-500">根据 diff 自动生成 commit message</p>
                       <select
                         v-model="sceneConfigs.git"
-                        class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-orange-500/50 focus:outline-none transition"
+                        class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-orange-500/50 focus:outline-none transition"
                       >
                         <option value="">跟随全局默认 ({{ globalModelName }})</option>
                         <option v-for="c in configList" :key="c.id" :value="c.id">{{ c.name }} — {{ c.model }}</option>
@@ -223,20 +308,20 @@
                 </div>
 
                 <!-- 报错诊断 -->
-                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526] transition hover:border-gray-600">
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised transition hover:border-gray-600">
                   <div class="flex items-start gap-3">
                     <div class="flex items-center justify-center flex-shrink-0 text-lg text-red-400 rounded-lg w-9 h-9 bg-red-500/15">
                       D
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm font-medium text-white">提问及诊断</span>
+                        <span class="text-sm font-medium text-gray-100">提问及诊断</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400/80">diagnosis</span>
                       </div>
                       <p class="mb-3 text-xs text-gray-500">分析终端日志、定位错误原因并给出修复建议</p>
                       <select
                         v-model="sceneConfigs.diagnosis"
-                        class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-red-500/50 focus:outline-none transition"
+                        class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-red-500/50 focus:outline-none transition"
                       >
                         <option value="">跟随全局默认 ({{ globalModelName }})</option>
                         <option v-for="c in configList" :key="c.id" :value="c.id">{{ c.name }} — {{ c.model }}</option>
@@ -244,16 +329,16 @@
                     </div>
                   </div>
                 </div>
-                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526] transition hover:border-gray-600">
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised transition hover:border-gray-600">
                   <div class="flex items-start gap-3">
                     <div class="flex items-center justify-center flex-shrink-0 text-lg text-blue-400 rounded-lg w-9 h-9 bg-blue-500/15">W</div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm font-medium text-white">Weekly Report</span>
+                        <span class="text-sm font-medium text-gray-100">Weekly Report</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400/80">weekly report</span>
                       </div>
                       <p class="mb-3 text-xs text-gray-500">Summarize authored Git activity across repositories</p>
-                      <select v-model="sceneConfigs.weeklyReport" class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-blue-500/50 focus:outline-none transition">
+                      <select v-model="sceneConfigs.weeklyReport" class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500/50 focus:outline-none transition">
                         <option value="">Follow global default ({{ globalModelName }})</option>
                         <option v-for="c in configList" :key="c.id" :value="c.id">{{ c.name }} - {{ c.model }}</option>
                       </select>
@@ -264,11 +349,11 @@
             </div>
           </template>
 
-          <!-- 空状态 -->
+          <!-- Tunnel 视图 -->
           <template v-else-if="currentView === 'tunnel'">
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
-                <h4 class="text-base font-bold text-white">Tunnel Config</h4>
+                <h4 class="text-base font-bold text-gray-100">Tunnel Config</h4>
                 <p class="mt-1 text-xs text-gray-500">Configure cloudflared token and tunnel runtime.</p>
               </div>
 
@@ -278,7 +363,7 @@
                   <input
                     v-model="tunnelConfig.token"
                     type="password"
-                    class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-cyan-500 focus:outline-none transition"
                     placeholder="Paste cloudflared tunnel run token"
                   >
                 </div>
@@ -288,7 +373,7 @@
                   <input
                     v-model="tunnelConfig.publicDomain"
                     type="text"
-                    class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-cyan-500 focus:outline-none transition"
                     placeholder="e.g. http://kuyep.indevs.in"
                   >
                 </div>
@@ -302,7 +387,7 @@
                   运行项目脚本自动切换隧道映射
                 </label>
 
-                <div class="p-3 border border-gray-700 rounded bg-[#252526] text-xs text-gray-300 space-y-2">
+                <div class="p-3 border border-gray-700 rounded bg-surface-raised text-xs text-gray-300 space-y-2">
                   <div class="flex items-center justify-between">
                     <span>Gateway</span>
                     <span class="font-mono">127.0.0.1:{{ tunnelState.gatewayPort || 26324 }}</span>
@@ -338,7 +423,7 @@
                   <button
                     @click="handleTunnelStop"
                     :disabled="!tunnelState.cloudflaredRunning"
-                    class="px-4 py-2 text-xs font-bold text-white bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"
+                    class="px-4 py-2 text-xs font-bold text-gray-100 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"
                   >
                     Stop cloudflared
                   </button>
@@ -347,10 +432,122 @@
             </div>
           </template>
 
+          <!-- 开发工具视图 -->
+          <template v-else-if="currentView === 'tool'">
+            <div class="flex-1 p-6 overflow-y-auto">
+              <div class="pb-2 mb-5 border-b border-gray-700">
+                <h4 class="text-base font-bold text-gray-100">开发工具</h4>
+                <p class="mt-1 text-xs text-gray-500">配置本地微信开发者工具路径，项目卡片中的微信打开按钮会读取当前平台对应的配置。</p>
+              </div>
+
+              <div class="space-y-5">
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
+                  <label class="block mb-2 text-sm font-medium text-gray-100">Windows 路径</label>
+                  <input
+                    v-model="wechatDevtoolsConfig.windowsPath"
+                    type="text"
+                    placeholder="支持目录、cli.bat 或 微信开发者工具.exe"
+                    class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                  >
+                  <p class="mt-2 text-[11px] text-gray-500">
+                    推荐直接填写安装目录或 <span class="font-mono text-gray-300">cli.bat</span> 路径。
+                  </p>
+                </div>
+
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
+                  <label class="block mb-2 text-sm font-medium text-gray-100">macOS 路径</label>
+                  <input
+                    v-model="wechatDevtoolsConfig.macosPath"
+                    type="text"
+                    placeholder="支持 .app 或 cli 路径"
+                    class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                  >
+                  <p class="mt-2 text-[11px] text-gray-500">
+                    可填写 <span class="font-mono text-gray-300">wechatwebdevtools.app</span> 或应用包内的 CLI 路径。
+                  </p>
+                </div>
+
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
+                  <label class="block mb-2 text-sm font-medium text-gray-100">打开终端</label>
+                  <p class="mb-3 text-[11px] text-gray-500">
+                    项目卡片上的终端按钮会用它打开项目目录。当前平台：<span class="font-mono text-gray-300">{{ serverPlatform || '检测中' }}</span>
+                  </p>
+                  <select
+                    :value="activeTerminalConfig.preset"
+                    @change="updateTerminalPreset($event.target.value)"
+                    class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 focus:outline-none transition"
+                  >
+                    <option
+                      v-for="preset in terminalPresets"
+                      :key="preset.id"
+                      :value="preset.id"
+                    >
+                      {{ preset.label }}{{ preset.available === false ? '（未检测到）' : '' }}
+                    </option>
+                    <option value="custom">自定义…</option>
+                  </select>
+                  <input
+                    v-if="activeTerminalConfig.preset === 'custom'"
+                    :value="activeTerminalConfig.customApp"
+                    @input="updateTerminalCustomApp($event.target.value)"
+                    type="text"
+                    :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\Program Files\Alacritty\alacritty.exe' : '应用名称或 .app 路径，例如 iTerm 或 /Applications/iTerm.app'"
+                    class="w-full mt-2 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                  >
+                  <p class="mt-2 text-[11px] text-gray-500">
+                    选择后立即生效，以新窗口打开项目目录。标注「未检测到」的终端仍可选中，启动失败会回退或提示。
+                  </p>
+                </div>
+
+                <div class="text-xs text-gray-500">
+                  输入后会自动保存到本地配置文件，当前平台未配置时，小程序项目上的微信开发者工具按钮会保持禁用状态。
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 外观视图 -->
+          <template v-else-if="currentView === 'appearance'">
+            <div class="flex-1 p-6 overflow-y-auto">
+              <div class="pb-2 mb-5 border-b border-gray-700">
+                <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
+                  <Palette class="w-4 h-4 text-indigo-400" />
+                  外观
+                </h4>
+                <p class="mt-1 text-xs text-gray-500">选择配色方案，切换后立即生效并保存到本地配置。</p>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <button
+                  v-for="option in themeOptions"
+                  :key="option.value"
+                  @click="selectTheme(option.value)"
+                  class="p-4 text-left transition border rounded-lg"
+                  :class="themeMode === option.value ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 bg-surface-raised hover:border-gray-600'"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <component :is="option.icon" class="w-5 h-5" :class="themeMode === option.value ? 'text-indigo-400' : 'text-gray-400'" />
+                    <Check v-if="themeMode === option.value" class="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div class="text-sm font-medium" :class="themeMode === option.value ? 'text-indigo-300' : 'text-gray-200'">{{ option.label }}</div>
+                  <p class="mt-1 text-[11px] text-gray-500">{{ option.desc }}</p>
+                </button>
+              </div>
+
+              <div class="p-3 mt-5 text-xs text-gray-400 border border-gray-700 rounded bg-surface-raised">
+                当前生效：{{ resolvedThemeLabel }}（{{ themeModeLabel }}）
+              </div>
+            </div>
+          </template>
+
+          <!-- 倒计时提醒视图 -->
           <template v-else-if="currentView === 'reminder'">
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
-                <h4 class="text-base font-bold text-white">倒计时提醒</h4>
+                <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
+                  <Timer class="w-4 h-4 text-amber-400" />
+                  倒计时提醒
+                </h4>
                 <p class="mt-1 text-xs text-gray-500">应用运行时，在指定时间段内按固定间隔发送系统通知。</p>
               </div>
 
@@ -370,7 +567,7 @@
                     <input
                       v-model="countdownReminderConfig.startTime"
                       type="time"
-                      class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none transition"
+                      class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-amber-500 focus:outline-none transition"
                     >
                   </div>
 
@@ -379,7 +576,7 @@
                     <input
                       v-model="countdownReminderConfig.endTime"
                       type="time"
-                      class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none transition"
+                      class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-amber-500 focus:outline-none transition"
                     >
                   </div>
 
@@ -391,7 +588,7 @@
                       min="1"
                       max="720"
                       step="1"
-                      class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none transition"
+                      class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-amber-500 focus:outline-none transition"
                     >
                   </div>
                 </div>
@@ -401,7 +598,7 @@
                   <input
                     v-model="countdownReminderConfig.title"
                     type="text"
-                    class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none transition"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-amber-500 focus:outline-none transition"
                   >
                 </div>
 
@@ -410,29 +607,30 @@
                   <textarea
                     v-model="countdownReminderConfig.body"
                     rows="3"
-                    class="w-full bg-[#252526] border border-gray-600 rounded px-3 py-2 text-sm text-white resize-none focus:border-amber-500 focus:outline-none transition"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 resize-none focus:border-amber-500 focus:outline-none transition"
                   ></textarea>
                 </div>
 
-                <div class="p-3 text-xs text-gray-400 border border-gray-700 rounded bg-[#252526]">
+                <div class="p-3 text-xs text-gray-400 border border-gray-700 rounded bg-surface-raised">
                   只要应用仍在运行，提醒会通过系统通知发出；应用完全退出后不会继续倒计时。
                 </div>
               </div>
             </div>
           </template>
 
+          <!-- 应用更新视图 -->
           <template v-else-if="currentView === 'app'">
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
-                <h4 class="text-base font-bold text-white">应用更新</h4>
+                <h4 class="text-base font-bold text-gray-100">应用更新</h4>
                 <p class="mt-1 text-xs text-gray-500">自动下载更新包，下载完成后可重启安装。</p>
               </div>
 
               <div class="space-y-4">
-                <div class="p-4 border border-gray-700 rounded bg-[#252526] space-y-2 text-sm">
+                <div class="p-4 border border-gray-700 rounded bg-surface-raised space-y-2 text-sm">
                   <div class="flex items-center justify-between">
                     <span class="text-gray-400">应用名称</span>
-                    <span class="font-medium text-white">{{ appUpdate.appName || '-' }}</span>
+                    <span class="font-medium text-gray-100">{{ appUpdate.appName || '-' }}</span>
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-gray-400">当前版本</span>
@@ -440,7 +638,7 @@
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-gray-400">最新版本</span>
-                    <span class="font-mono text-white">
+                    <span class="font-mono text-gray-100">
                       {{ appUpdate.latestVersion ? `v${appUpdate.latestVersion}` : '-' }}
                     </span>
                   </div>
@@ -497,81 +695,8 @@
             </div>
           </template>
 
-          <template v-else-if="currentView === 'tool'">
-            <div class="flex-1 p-6 overflow-y-auto">
-              <div class="pb-2 mb-5 border-b border-gray-700">
-                <h4 class="text-base font-bold text-white">开发工具</h4>
-                <p class="mt-1 text-xs text-gray-500">配置本地微信开发者工具路径，项目卡片中的微信打开按钮会读取当前平台对应的配置。</p>
-              </div>
-
-              <div class="space-y-5">
-                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526]">
-                  <label class="block mb-2 text-sm font-medium text-white">Windows 路径</label>
-                  <input
-                    v-model="wechatDevtoolsConfig.windowsPath"
-                    type="text"
-                    placeholder="支持目录、cli.bat 或 微信开发者工具.exe"
-                    class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
-                  <p class="mt-2 text-[11px] text-gray-500">
-                    推荐直接填写安装目录或 <span class="font-mono text-gray-300">cli.bat</span> 路径。
-                  </p>
-                </div>
-
-                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526]">
-                  <label class="block mb-2 text-sm font-medium text-white">macOS 路径</label>
-                  <input
-                    v-model="wechatDevtoolsConfig.macosPath"
-                    type="text"
-                    placeholder="支持 .app 或 cli 路径"
-                    class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
-                  <p class="mt-2 text-[11px] text-gray-500">
-                    可填写 <span class="font-mono text-gray-300">wechatwebdevtools.app</span> 或应用包内的 CLI 路径。
-                  </p>
-                </div>
-
-                <div class="p-4 border border-gray-700 rounded-lg bg-[#252526]">
-                  <label class="block mb-2 text-sm font-medium text-white">打开终端</label>
-                  <p class="mb-3 text-[11px] text-gray-500">
-                    项目卡片上的终端按钮会用它打开项目目录。当前平台：<span class="font-mono text-gray-300">{{ serverPlatform || '检测中' }}</span>
-                  </p>
-                  <select
-                    :value="activeTerminalConfig.preset"
-                    @change="updateTerminalPreset($event.target.value)"
-                    class="w-full bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none transition"
-                  >
-                    <option
-                      v-for="preset in terminalPresets"
-                      :key="preset.id"
-                      :value="preset.id"
-                    >
-                      {{ preset.label }}{{ preset.available === false ? '（未检测到）' : '' }}
-                    </option>
-                    <option value="custom">自定义…</option>
-                  </select>
-                  <input
-                    v-if="activeTerminalConfig.preset === 'custom'"
-                    :value="activeTerminalConfig.customApp"
-                    @input="updateTerminalCustomApp($event.target.value)"
-                    type="text"
-                    :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\Program Files\Alacritty\alacritty.exe' : '应用名称或 .app 路径，例如 iTerm 或 /Applications/iTerm.app'"
-                    class="w-full mt-2 bg-[#1e1e1e] border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
-                  <p class="mt-2 text-[11px] text-gray-500">
-                    选择后立即生效，以新窗口打开项目目录。标注「未检测到」的终端仍可选中，启动失败会回退或提示。
-                  </p>
-                </div>
-
-                <div class="text-xs text-gray-500">
-                  输入后会自动保存到本地配置文件，当前平台未配置时，小程序项目上的微信开发者工具按钮会保持禁用状态。
-                </div>
-              </div>
-            </div>
-          </template>
-
           <div v-else class="flex flex-col items-center justify-center h-full text-gray-600">
-            <div class="mb-2 text-4xl grayscale opacity-30">⚙️</div>
+            <Settings class="w-10 h-10 mb-2 opacity-30" />
             <p class="text-sm">请在左侧选择模型，或点击添加</p>
           </div>
 
@@ -583,7 +708,9 @@
 
 <script setup>
 import { ref, watch, computed, nextTick, onMounted, onUnmounted } from 'vue';
+import { Settings, Target, Timer, Plus, Pencil, Check, AlertTriangle, Moon, Sun, Monitor, Palette } from 'lucide-vue-next';
 import { useAiConfig } from '../utils/useAiConfig';
+import { useTheme } from '../utils/useTheme';
 import { socket } from '../utils/socket';
 
 const props = defineProps({ visible: Boolean });
@@ -605,7 +732,9 @@ const {
   removeConfig
 } = useAiConfig();
 
-const currentView = ref('model'); // 'model' | 'scene' | 'tunnel' | 'tool' | 'app'
+const { themeMode, resolvedTheme } = useTheme();
+
+const currentView = ref('model'); // 'model' | 'scene' | 'tunnel' | 'tool' | 'appearance' | 'reminder' | 'app'
 const currentEditId = ref(null);
 const formData = ref(null);
 const isCreating = ref(false);
@@ -669,6 +798,59 @@ const updateTerminalCustomApp = (value) => {
 // 全局默认模型名称（用于场景配置的下拉提示）
 const globalModelName = computed(() => activeConfig.value?.name || '未配置');
 
+// --- 场景徽章 ---
+const SCENE_META = [
+  { key: 'git', letter: 'G', label: 'Git 提交', tone: 'bg-orange-500/15 text-orange-400' },
+  { key: 'diagnosis', letter: 'D', label: 'AI 诊断', tone: 'bg-red-500/15 text-red-400' },
+  { key: 'weeklyReport', letter: 'W', label: '周报', tone: 'bg-blue-500/15 text-blue-400' }
+];
+
+// 模型 id -> 使用了该模型的场景列表
+const sceneUsage = computed(() => {
+  const map = {};
+  for (const meta of SCENE_META) {
+    const id = sceneConfigs.value ? sceneConfigs.value[meta.key] : '';
+    if (!id) continue;
+    if (!map[id]) map[id] = [];
+    map[id].push(meta);
+  }
+  return map;
+});
+
+// 当前编辑中的模型被哪些场景使用（新增态没有 id，自然为空）
+const formSceneUsage = computed(() => {
+  const id = formData.value ? formData.value.id : '';
+  return id && sceneUsage.value[id] ? sceneUsage.value[id] : [];
+});
+
+// 列表第三行兜底：去掉协议与末尾斜杠的 Base URL
+const shortBaseURL = (url) => {
+  if (!url) return '未填写 Base URL';
+  let text = String(url);
+  if (text.startsWith('https://')) text = text.slice(8);
+  else if (text.startsWith('http://')) text = text.slice(7);
+  while (text.endsWith('/')) text = text.slice(0, -1);
+  return text;
+};
+
+// --- 外观 ---
+const themeOptions = [
+  { value: 'dark', label: '深色', desc: '始终使用深色配色', icon: Moon },
+  { value: 'light', label: '浅色', desc: '始终使用浅色配色', icon: Sun },
+  { value: 'auto', label: '跟随系统', desc: '随系统外观自动切换', icon: Monitor }
+];
+
+const selectTheme = (value) => {
+  themeMode.value = value;
+};
+
+const resolvedThemeLabel = computed(() => (resolvedTheme.value === 'dark' ? '深色' : '浅色'));
+
+const themeModeLabel = computed(() => {
+  if (themeMode.value === 'auto') return '跟随系统';
+  return themeMode.value === 'dark' ? '手动指定深色' : '手动指定浅色';
+});
+
 // 点击左侧模型列表项
 const handleSelect = (config) => {
   currentView.value = 'model';
@@ -705,6 +887,13 @@ const showAppView = () => {
 
 const showToolView = () => {
   currentView.value = 'tool';
+  currentEditId.value = null;
+  formData.value = null;
+  isCreating.value = false;
+};
+
+const showAppearanceView = () => {
+  currentView.value = 'appearance';
   currentEditId.value = null;
   formData.value = null;
   isCreating.value = false;

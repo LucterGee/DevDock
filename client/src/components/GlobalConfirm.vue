@@ -3,7 +3,7 @@
     <div v-if="state.visible" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm">
       
       <div 
-        class="w-full max-w-md bg-[#1e1e1e] border border-gray-700 rounded-lg shadow-2xl overflow-hidden scale-in"
+        class="w-full max-w-md bg-surface border border-gray-700 rounded-lg shadow-2xl overflow-hidden scale-in"
         role="dialog"
       >
         <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-700">
@@ -13,17 +13,17 @@
           <div v-else class="text-yellow-500">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
           </div>
-          <h3 class="text-lg font-bold text-white">{{ state.title }}</h3>
+          <h3 class="text-lg font-bold text-gray-100">{{ state.title }}</h3>
         </div>
 
         <div class="px-6 py-6 text-sm leading-relaxed text-gray-300 whitespace-pre-wrap">
           {{ state.content }}
         </div>
 
-        <div class="px-6 py-4 bg-[#252526] flex justify-end gap-3">
+        <div class="px-6 py-4 bg-surface-raised flex justify-end gap-3">
           <button 
             @click="handleAction(false)" 
-            class="px-4 py-2 text-xs font-medium text-gray-300 transition border border-gray-600 rounded hover:text-white hover:bg-gray-700"
+            class="px-4 py-2 text-xs font-medium text-gray-300 transition border border-gray-600 rounded hover:text-gray-100 hover:bg-gray-700"
           >
             {{ state.cancelText }}
           </button>

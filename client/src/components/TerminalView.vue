@@ -9,9 +9,12 @@ import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
 import { useAiConfig } from '../utils/useAiConfig';
+import { useTheme } from '../utils/useTheme';
 import { socket } from '../utils/socket';
+import { Bot, AlertTriangle, Wrench, Check, Info, LoaderCircle, X } from 'lucide-vue-next';
 
 const { activeConfig, getSceneConfig } = useAiConfig();
+const { resolvedTheme } = useTheme();
 const diagModelConfig = computed(() => getSceneConfig('diagnosis'));
 
 const props = defineProps({
@@ -470,10 +473,18 @@ const handleFix = async () => {
 };
 
 // --- xterm 初始化 ---
+// 两套 xterm 配色：深色沿用原配色，浅色白底深字
+const xtermThemes = {
+  dark: { background: '#0f172a', foreground: '#cbd5e1', cursor: '#38bdf8', selectionBackground: '#3b82f64d' },
+  light: { background: '#ffffff', foreground: '#0f172a', cursor: '#2563eb', selectionBackground: '#3b82f633' }
+};
+// 每次返回新对象：xterm 对 theme 这类对象选项按引用判断变更
+const currentXtermTheme = () => ({ ...(xtermThemes[resolvedTheme.value] || xtermThemes.dark) });
+
 const initTerminal = () => {
   if (term) return;
   term = new Terminal({
-    theme: { background: '#0f172a', foreground: '#cbd5e1', cursor: '#38bdf8', selectionBackground: '#3b82f64d' },
+    theme: currentXtermTheme(),
     fontSize: 12, lineHeight: 1.4, fontFamily: 'Consolas, "Courier New", monospace',
     convertEol: true, rows: 16, cursorBlink: true, disableStdin: true, rightClickSelectsWord: true,
   });
@@ -508,6 +519,9 @@ const flushLogs = () => {
 
 onMounted(() => { nextTick(() => initTerminal()); });
 watch(() => props.logs, () => flushLogs(), { deep: true });
+watch(resolvedTheme, () => {
+  if (term) term.options.theme = currentXtermTheme();
+});
 const resizeObserver = new ResizeObserver(() => {
   // 面板折叠（v-show 隐藏）时容器尺寸为 0，跳过 fit 避免 xterm 计算异常
   const el = terminalContainer.value;
@@ -524,24 +538,24 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full bg-[#0f172a] rounded-b-lg overflow-hidden border-t border-gray-700 relative group">
+  <div class="w-full bg-surface-sunken rounded-b-lg overflow-hidden border-t border-gray-700 relative group">
 
     <div class="absolute z-10 flex items-center gap-2 pointer-events-none top-2 left-4">
        <span v-if="hasError" class="flex items-center gap-1 text-[10px] font-bold text-red-400 animate-pulse bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm border border-red-500/30">
-          ⚠️ 报错检测
+          <AlertTriangle class="w-3.5 h-3.5" /> 报错检测
        </span>
     </div>
 
     <div class="absolute z-10 flex items-center gap-2 transition-opacity duration-200 opacity-0 top-2 right-4 group-hover:opacity-100">
-      <span v-if="copySuccess" class="px-2 py-1 text-xs text-green-400 border rounded bg-black/50 fade-in border-green-500/30">✅ 已复制</span>
-      <span v-if="copyError" class="px-2 py-1 text-xs text-red-300 border rounded bg-black/50 fade-in border-red-500/30">❌ 复制失败</span>
+      <span v-if="copySuccess" class="flex items-center gap-1 px-2 py-1 text-xs text-green-400 border rounded bg-black/50 fade-in border-green-500/30"><Check class="w-3.5 h-3.5" /> 已复制</span>
+      <span v-if="copyError" class="flex items-center gap-1 px-2 py-1 text-xs text-red-300 border rounded bg-black/50 fade-in border-red-500/30"><X class="w-3.5 h-3.5" /> 复制失败</span>
 
       <input v-model="userQuestion" @keyup.enter="handleAnalyze" type="text" placeholder="向 AI 提问..."
-        class="w-40 px-2 py-1 text-xs text-white placeholder-gray-500 transition border border-gray-600 rounded bg-gray-800/80 backdrop-blur-sm focus:border-purple-500 focus:outline-none focus:w-56" />
+        class="w-40 px-2 py-1 text-xs text-gray-100 placeholder-gray-500 transition border border-gray-600 rounded bg-gray-800/80 backdrop-blur-sm focus:border-purple-500 focus:outline-none focus:w-56" />
 
       <button @click="openAiModal"
         class="flex items-center gap-1 px-2 py-1 text-xs text-white transition border rounded backdrop-blur-sm bg-purple-600/80 hover:bg-purple-600 border-purple-500/50" title="打开 AI 诊断面板">
-        <span>🤖</span>
+        <Bot class="w-4 h-4" />
         AI 诊断
       </button>
 
@@ -566,19 +580,19 @@ onBeforeUnmount(() => {
     <!-- AI 弹窗 -->
     <div v-if="showAiModal"
       class="z-50 flex flex-col backdrop-blur-md transition-all duration-300 animate-fade-in"
-      :class="isFullscreen ? 'fixed inset-0 bg-[#0f172a]' : 'absolute inset-0 bg-[#0f172a]/95'"
+      :class="isFullscreen ? 'fixed inset-0 bg-surface-sunken' : 'absolute inset-0 bg-surface-sunken/95'"
     >
       <!-- 头部 -->
-      <div class="flex items-center justify-between p-3 border-b border-gray-700/50 bg-[#1e293b]/50">
+      <div class="flex items-center justify-between p-3 border-b border-gray-700/50 bg-surface-raised/50">
         <h3 class="flex items-center gap-2 text-sm font-bold text-purple-400">
-          <span>🤖</span> AI 报告
+          <Bot class="w-4 h-4" /> AI 报告
         </h3>
         <div class="flex items-center gap-1">
-          <button @click="isFullscreen = !isFullscreen" class="px-2 text-gray-400 transition rounded hover:text-white hover:bg-white/10" :title="isFullscreen ? '退出全屏' : '全屏'">
+          <button @click="isFullscreen = !isFullscreen" class="px-2 text-gray-400 transition rounded hover:text-gray-100 hover:bg-gray-700/40" :title="isFullscreen ? '退出全屏' : '全屏'">
             <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
             <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
           </button>
-          <button @click="showAiModal = false; isFullscreen = false" class="px-2 text-gray-400 transition rounded hover:text-white hover:bg-white/10">✕</button>
+          <button @click="showAiModal = false; isFullscreen = false" class="px-2 text-gray-400 transition rounded hover:text-gray-100 hover:bg-gray-700/40">✕</button>
         </div>
       </div>
 
@@ -591,7 +605,7 @@ onBeforeUnmount(() => {
         </div>
         <!-- 空状态：尚未诊断 -->
         <div v-else-if="!aiResult" class="flex flex-col items-center justify-center h-full space-y-3 text-gray-500">
-          <div class="text-3xl opacity-30">🤖</div>
+          <div class="text-3xl opacity-30"><Bot class="w-8 h-8" /></div>
           <p class="text-sm">点击下方「立即诊断」开始分析</p>
           <p class="text-xs text-gray-600">将基于当前终端日志进行智能诊断</p>
         </div>
@@ -601,15 +615,15 @@ onBeforeUnmount(() => {
 
           <!-- 修复执行进度 -->
           <div v-if="fixSteps.length > 0" class="pt-4 mt-4 border-t border-gray-700 not-prose">
-            <h4 class="mb-3 text-sm font-bold text-amber-400">🔧 修复执行</h4>
+            <h4 class="mb-3 text-sm font-bold text-amber-400"><Wrench class="inline w-4 h-4 align-text-bottom" /> 修复执行</h4>
             <div class="space-y-2">
-              <div v-for="(step, i) in fixSteps" :key="i" class="rounded-lg border border-gray-700 bg-[#0d1117] overflow-hidden">
-                <div class="flex items-center gap-2 px-3 py-2 bg-[#161b22]">
+              <div v-for="(step, i) in fixSteps" :key="i" class="rounded-lg border border-gray-700 bg-surface-sunken overflow-hidden">
+                <div class="flex items-center gap-2 px-3 py-2 bg-surface-sunken">
                   <span v-if="step.status === 'pending'" class="text-gray-500">○</span>
                   <span v-else-if="step.status === 'running'" class="text-blue-400 animate-pulse">◉</span>
-                  <span v-else-if="step.status === 'success'" class="text-green-400">✅</span>
-                  <span v-else-if="step.status === 'error'" class="text-red-400">❌</span>
-                  <span v-else class="text-gray-400">ℹ️</span>
+                  <Check v-else-if="step.status === 'success'" class="w-3.5 h-3.5 text-green-400" />
+                  <X v-else-if="step.status === 'error'" class="w-3.5 h-3.5 text-red-400" />
+                  <Info v-else class="w-3.5 h-3.5 text-gray-400" />
                   <span class="text-xs" :class="step.status === 'error' ? 'text-red-300' : 'text-gray-300'">{{ step.label }}</span>
                 </div>
                 <div v-if="step.output" class="px-3 py-2 text-xs border-t border-gray-700/50">
@@ -622,7 +636,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 底部 -->
-      <div class="flex items-center justify-between px-4 py-2 text-xs border-t border-gray-700/50 bg-[#1e293b]/30">
+      <div class="flex items-center justify-between px-4 py-2 text-xs border-t border-gray-700/50 bg-surface-raised/30">
         <div class="flex items-center gap-2 text-gray-500">
           <span>由</span>
           <span class="text-purple-400">{{ diagModelConfig.name || 'AI' }}</span>
@@ -637,11 +651,11 @@ onBeforeUnmount(() => {
             v-if="!isFixing"
             @click="handleAnalyze"
             :disabled="isAnalyzing || (logs.length === 0 && !userQuestion.trim())"
-            class="flex items-center gap-1 px-3 py-1 font-medium text-white transition rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            :class="isAnalyzing ? 'bg-gray-600' : 'bg-purple-600 hover:bg-purple-500'"
+            class="flex items-center gap-1 px-3 py-1 font-medium transition rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            :class="isAnalyzing ? 'bg-gray-600 text-gray-100' : 'bg-purple-600 hover:bg-purple-500 text-white'"
           >
-            <span v-if="isAnalyzing" class="animate-spin">⏳</span>
-            <span v-else>🤖</span>
+            <LoaderCircle v-if="isAnalyzing" class="w-4 h-4 animate-spin" />
+            <Bot v-else class="w-4 h-4" />
             {{ isAnalyzing ? '诊断中...' : '立即诊断' }}
           </button>
           <!-- 执行修复：诊断成功后才显示 -->
@@ -651,7 +665,7 @@ onBeforeUnmount(() => {
             :disabled="!projectPath"
             class="flex items-center gap-1 px-3 py-1 font-medium text-white transition rounded disabled:opacity-50 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500"
           >
-            <span>🔧</span>
+            <Wrench class="w-4 h-4" />
             执行修复
           </button>
         </div>
@@ -666,10 +680,10 @@ onBeforeUnmount(() => {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
 
-.custom-markdown :deep(pre) { background-color: #0d1117 !important; padding: 1rem; border-radius: 0.5rem; border: 1px solid #30363d; overflow-x: auto; }
-.custom-markdown :deep(code) { color: #e5e7eb; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background-color: transparent !important; }
-.custom-markdown :deep(h3) { color: #c084fc; margin-top: 1em; font-size: 1.1em; border-bottom: 1px solid #333; padding-bottom: 0.3em; }
+.custom-markdown :deep(pre) { background-color: var(--color-surface-sunken) !important; padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--color-gray-700); overflow-x: auto; }
+.custom-markdown :deep(code) { color: var(--color-gray-100); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background-color: transparent !important; }
+.custom-markdown :deep(h3) { color: var(--color-markdown-heading); margin-top: 1em; font-size: 1.1em; border-bottom: 1px solid var(--color-gray-700); padding-bottom: 0.3em; }
 .custom-markdown :deep(ul) { padding-left: 1.2rem; list-style-type: disc; }
 .custom-markdown :deep(li) { margin-bottom: 0.2em; }
-.custom-markdown :deep(strong) { color: #818cf8; }
+.custom-markdown :deep(strong) { color: var(--color-markdown-strong); }
 </style>

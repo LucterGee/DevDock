@@ -109,7 +109,7 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-900 text-white">
+  <div class="min-h-screen bg-gray-900 text-gray-100">
     <header class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-gray-700 bg-gray-800 p-4">
       <div>
         <h1 class="text-xl font-bold text-blue-400">Weekly Report</h1>
@@ -140,8 +140,8 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
       </aside>
       <section class="space-y-4">
         <div class="flex flex-wrap items-end gap-3 rounded border border-gray-700 bg-gray-800 p-4">
-          <label class="text-xs text-gray-400">开始日期<input v-model="dates.startDate" type="date" class="mt-1 block rounded border border-gray-600 bg-gray-900 px-2 py-2 text-sm text-white" /></label>
-          <label class="text-xs text-gray-400">结束日期<input v-model="dates.endDate" type="date" class="mt-1 block rounded border border-gray-600 bg-gray-900 px-2 py-2 text-sm text-white" /></label>
+          <label class="text-xs text-gray-400">开始日期<input v-model="dates.startDate" type="date" class="mt-1 block rounded border border-gray-600 bg-gray-900 px-2 py-2 text-sm text-gray-100" /></label>
+          <label class="text-xs text-gray-400">结束日期<input v-model="dates.endDate" type="date" class="mt-1 block rounded border border-gray-600 bg-gray-900 px-2 py-2 text-sm text-gray-100" /></label>
           <button class="rounded bg-gray-700 px-4 py-2 text-sm hover:bg-gray-600 disabled:opacity-50" :disabled="loading" @click="collect">{{ loading ? '采集中…' : '刷新活动' }}</button>
           <button class="rounded bg-blue-600 px-4 py-2 text-sm hover:bg-blue-500 disabled:opacity-50" :disabled="generating || !activity.commits.length" @click="generate">{{ generating ? '生成中…' : `生成周报 (${selectedCount})` }}</button>
         </div>

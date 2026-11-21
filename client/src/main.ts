@@ -6,6 +6,7 @@ import GlobalToast from './components/GlobalToast.vue'
 import GlobalConfirm from './components/GlobalConfirm.vue'
 import { toast } from './utils/toast'
 import { confirm } from './utils/confirm'
+import './utils/useTheme' // 初始化主题（读配置 + 应用 class）
 
 const app = createApp(App)
 
