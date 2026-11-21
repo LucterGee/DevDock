@@ -326,7 +326,7 @@
                     <div class="flex items-center justify-center flex-shrink-0 text-lg text-blue-400 rounded-lg w-9 h-9 bg-blue-500/15">W</div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm font-medium text-gray-100">Weekly Report</span>
+                        <span class="text-sm font-medium text-gray-100">工作汇报</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400/80">weekly report</span>
                       </div>
                       <select v-model="sceneConfigs.weeklyReport" class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500/50 focus:outline-none transition">
@@ -771,7 +771,7 @@ const globalModelName = computed(() => activeConfig.value?.name || '未配置');
 const SCENE_META = [
   { key: 'git', letter: 'G', label: 'Git 提交', tone: 'bg-orange-500/15 text-orange-400' },
   { key: 'diagnosis', letter: 'D', label: 'AI 诊断', tone: 'bg-red-500/15 text-red-400' },
-  { key: 'weeklyReport', letter: 'W', label: '周报', tone: 'bg-blue-500/15 text-blue-400' }
+  { key: 'weeklyReport', letter: 'W', label: '工作汇报', tone: 'bg-blue-500/15 text-blue-400' }
 ];
 
 // 模型 id -> 使用了该模型的场景列表
