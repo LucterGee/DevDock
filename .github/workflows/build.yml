@@ -27,6 +27,13 @@ jobs:
         with:
           node-version: 22
 
+      # 2.5 准备内置 nginx 二进制（macOS 从 Homebrew 复制并收集依赖）
+      - name: Prepare bundled nginx
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install nginx; fi
+          node scripts/fetch-nginx.js
+
       # 3. 安装前端依赖
       - name: Install Frontend Dependencies
         run: |

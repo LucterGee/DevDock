@@ -32,7 +32,8 @@ const makeRoute = (id, overrides = {}) => ({
 test('默认状态包含完整的 nginx 配置项', () => {
   const state = createDefaultState();
   assert.equal(state.version, 1);
-  assert.equal(state.nginx.reloadCommand, 'nginx -s reload');
+  assert.equal(state.nginx.port, 18080);
+  assert.ok(state.nginx.prefixDir.endsWith(path.join('.devdock', 'nginx')));
   assert.equal(state.nginx.onConflict, 'ask');
   assert.equal(state.nginx.accessLog.enabled, false);
   assert.deepEqual(state.routes, []);
@@ -117,13 +118,13 @@ test('sync 删除已移除或停用路由对应的托管文件', () => {
 test('状态读写保留默认值并合并自定义项', () => {
   const { store, statePath } = makeStore();
   const state = store.load();
-  state.nginx.reloadCommand = 'docker exec nginx nginx -s reload';
+  state.nginx.port = 18099;
   state.routes = [makeRoute('alpha')];
   store.save(state);
 
   const reloaded = createNginxStore({ statePath, routesDir: store.routesDir }).load();
-  assert.equal(reloaded.nginx.reloadCommand, 'docker exec nginx nginx -s reload');
-  assert.equal(reloaded.nginx.testCommand, 'nginx -t');
+  assert.equal(reloaded.nginx.port, 18099);
+  assert.equal(reloaded.nginx.backupLimit, 10);
   assert.equal(reloaded.routes.length, 1);
 });
 

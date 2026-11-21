@@ -6,21 +6,22 @@ const crypto = require('crypto');
 const { generateLocationBlock } = require('./generator');
 
 const HEADER_MARK = '# devdock:generated';
-const DEFAULT_ROUTE_DIR = path.join(os.homedir(), '.devdock', 'nginx', 'routes');
-const DEFAULT_LOG_DIR = path.join(os.homedir(), '.devdock', 'nginx', 'logs');
-const DEFAULT_BACKUP_DIR = path.join(os.homedir(), '.devdock', 'nginx', 'backups');
+const DEFAULT_PREFIX_DIR = path.join(os.homedir(), '.devdock', 'nginx');
+const DEFAULT_ROUTE_DIR = path.join(DEFAULT_PREFIX_DIR, 'routes');
+const DEFAULT_LOG_DIR = path.join(DEFAULT_PREFIX_DIR, 'logs');
+const DEFAULT_BACKUP_DIR = path.join(DEFAULT_PREFIX_DIR, 'backups');
+const DEFAULT_PORT = 18080;
 const DEFAULT_STATE_PATH = path.join(os.homedir(), '.devdock-nginx.json');
 
 const createDefaultState = () => ({
   version: 1,
   nginx: {
-    binPath: '',
-    confPath: '',
-    testCommand: 'nginx -t',
-    reloadCommand: 'nginx -s reload',
-    restartCommand: '',
+    // 使用内置 nginx：端口与目录由 DevDock 管理，但都允许用户自行修改
+    port: DEFAULT_PORT,
+    prefixDir: DEFAULT_PREFIX_DIR,
     routesDir: DEFAULT_ROUTE_DIR,
     logDir: DEFAULT_LOG_DIR,
+    backupDir: DEFAULT_BACKUP_DIR,
     editor: 'vscode',
     accessLog: { enabled: false, path: path.join(DEFAULT_LOG_DIR, 'access.log') },
     errorLog: { enabled: true, path: path.join(DEFAULT_LOG_DIR, 'error.log') },
@@ -208,6 +209,8 @@ module.exports = {
   routeFileName,
   writeFileAtomic,
   HEADER_MARK,
+  DEFAULT_PREFIX_DIR,
   DEFAULT_ROUTE_DIR,
+  DEFAULT_PORT,
   DEFAULT_STATE_PATH,
 };
