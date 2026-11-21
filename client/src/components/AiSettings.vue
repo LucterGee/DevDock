@@ -43,18 +43,15 @@
                   <span class="text-[10px] font-mono text-gray-500 truncate">{{ config.model }}</span>
                 </div>
 
-                <!-- 第三行：场景徽章，或 Base URL 兜底 -->
-                <div class="flex items-center gap-1 mt-1 min-w-0">
-                  <template v-if="sceneUsage[config.id]">
-                    <span
-                      v-for="badge in sceneUsage[config.id]"
-                      :key="badge.key"
-                      class="flex items-center justify-center flex-shrink-0 w-4 h-4 text-[9px] font-bold rounded"
-                      :class="badge.tone"
-                      :title="badge.label"
-                    >{{ badge.letter }}</span>
-                  </template>
-                  <span v-else class="text-[10px] text-gray-600 truncate">{{ shortBaseURL(config.baseURL) }}</span>
+                <!-- 第三行：场景徽章（无场景时不渲染该行） -->
+                <div v-if="sceneUsage[config.id]" class="flex items-center gap-1 mt-1 min-w-0">
+                  <span
+                    v-for="badge in sceneUsage[config.id]"
+                    :key="badge.key"
+                    class="flex items-center justify-center flex-shrink-0 w-4 h-4 text-[9px] font-bold rounded"
+                    :class="badge.tone"
+                    :title="badge.label"
+                  >{{ badge.letter }}</span>
                 </div>
               </div>
             </div>
@@ -214,7 +211,6 @@
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <div class="text-sm text-gray-200">全局默认模型</div>
-                        <p class="mt-0.5 text-[11px] text-gray-500">未单独指定场景的请求都会使用这个模型</p>
                       </div>
                       <button
                         v-if="!isCreating && activeId !== formData.id"
@@ -239,7 +235,6 @@
                           :class="badge.tone"
                         >{{ badge.label }}</span>
                       </div>
-                      <p v-else class="text-[11px] text-gray-500">未被任何场景单独指定，跟随全局默认</p>
                     </div>
                   </div>
                 </section>
@@ -264,7 +259,7 @@
                 </button>
                 <button
                   @click="save"
-                  class="px-5 py-2 text-xs font-bold text-white transition bg-blue-600 rounded shadow-lg hover:bg-blue-500 shadow-blue-900/50"
+                  class="px-5 py-2 text-xs font-bold text-white transition bg-blue-600 rounded shadow-sm hover:bg-blue-500"
                 >
                   保存配置
                 </button>
@@ -280,7 +275,6 @@
                   <Target class="w-4 h-4 text-purple-400" />
                   场景配置
                 </h4>
-                <p class="mt-1 text-xs text-gray-500">为不同使用场景指定独立的 AI 模型，未指定时跟随全局默认</p>
               </div>
 
               <div class="space-y-4">
@@ -295,7 +289,6 @@
                         <span class="text-sm font-medium text-gray-100">Git 提交消息</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400/80">git commit</span>
                       </div>
-                      <p class="mb-3 text-xs text-gray-500">根据 diff 自动生成 commit message</p>
                       <select
                         v-model="sceneConfigs.git"
                         class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-orange-500/50 focus:outline-none transition"
@@ -318,7 +311,6 @@
                         <span class="text-sm font-medium text-gray-100">提问及诊断</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400/80">diagnosis</span>
                       </div>
-                      <p class="mb-3 text-xs text-gray-500">分析终端日志、定位错误原因并给出修复建议</p>
                       <select
                         v-model="sceneConfigs.diagnosis"
                         class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-red-500/50 focus:outline-none transition"
@@ -337,7 +329,6 @@
                         <span class="text-sm font-medium text-gray-100">Weekly Report</span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400/80">weekly report</span>
                       </div>
-                      <p class="mb-3 text-xs text-gray-500">Summarize authored Git activity across repositories</p>
                       <select v-model="sceneConfigs.weeklyReport" class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500/50 focus:outline-none transition">
                         <option value="">Follow global default ({{ globalModelName }})</option>
                         <option v-for="c in configList" :key="c.id" :value="c.id">{{ c.name }} - {{ c.model }}</option>
@@ -354,7 +345,6 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="text-base font-bold text-gray-100">Tunnel Config</h4>
-                <p class="mt-1 text-xs text-gray-500">Configure cloudflared token and tunnel runtime.</p>
               </div>
 
               <div class="space-y-4">
@@ -437,7 +427,6 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="text-base font-bold text-gray-100">开发工具</h4>
-                <p class="mt-1 text-xs text-gray-500">配置本地微信开发者工具路径，项目卡片中的微信打开按钮会读取当前平台对应的配置。</p>
               </div>
 
               <div class="space-y-5">
@@ -449,9 +438,6 @@
                     placeholder="支持目录、cli.bat 或 微信开发者工具.exe"
                     class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                   >
-                  <p class="mt-2 text-[11px] text-gray-500">
-                    推荐直接填写安装目录或 <span class="font-mono text-gray-300">cli.bat</span> 路径。
-                  </p>
                 </div>
 
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
@@ -462,16 +448,10 @@
                     placeholder="支持 .app 或 cli 路径"
                     class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                   >
-                  <p class="mt-2 text-[11px] text-gray-500">
-                    可填写 <span class="font-mono text-gray-300">wechatwebdevtools.app</span> 或应用包内的 CLI 路径。
-                  </p>
                 </div>
 
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
                   <label class="block mb-2 text-sm font-medium text-gray-100">打开终端</label>
-                  <p class="mb-3 text-[11px] text-gray-500">
-                    项目卡片上的终端按钮会用它打开项目目录。当前平台：<span class="font-mono text-gray-300">{{ serverPlatform || '检测中' }}</span>
-                  </p>
                   <select
                     :value="activeTerminalConfig.preset"
                     @change="updateTerminalPreset($event.target.value)"
@@ -494,9 +474,6 @@
                     :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\Program Files\Alacritty\alacritty.exe' : '应用名称或 .app 路径，例如 iTerm 或 /Applications/iTerm.app'"
                     class="w-full mt-2 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                   >
-                  <p class="mt-2 text-[11px] text-gray-500">
-                    选择后立即生效，以新窗口打开项目目录。标注「未检测到」的终端仍可选中，启动失败会回退或提示。
-                  </p>
                 </div>
 
                 <div class="text-xs text-gray-500">
@@ -514,7 +491,6 @@
                   <Palette class="w-4 h-4 text-indigo-400" />
                   外观
                 </h4>
-                <p class="mt-1 text-xs text-gray-500">选择配色方案，切换后立即生效并保存到本地配置。</p>
               </div>
 
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -530,7 +506,6 @@
                     <Check v-if="themeMode === option.value" class="w-4 h-4 text-indigo-400" />
                   </div>
                   <div class="text-sm font-medium" :class="themeMode === option.value ? 'text-indigo-300' : 'text-gray-200'">{{ option.label }}</div>
-                  <p class="mt-1 text-[11px] text-gray-500">{{ option.desc }}</p>
                 </button>
               </div>
 
@@ -548,7 +523,6 @@
                   <Timer class="w-4 h-4 text-amber-400" />
                   倒计时提醒
                 </h4>
-                <p class="mt-1 text-xs text-gray-500">应用运行时，在指定时间段内按固定间隔发送系统通知。</p>
               </div>
 
               <div class="space-y-5">
@@ -623,7 +597,6 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="text-base font-bold text-gray-100">应用更新</h4>
-                <p class="mt-1 text-xs text-gray-500">自动下载更新包，下载完成后可重启安装。</p>
               </div>
 
               <div class="space-y-4">
@@ -823,21 +796,11 @@ const formSceneUsage = computed(() => {
   return id && sceneUsage.value[id] ? sceneUsage.value[id] : [];
 });
 
-// 列表第三行兜底：去掉协议与末尾斜杠的 Base URL
-const shortBaseURL = (url) => {
-  if (!url) return '未填写 Base URL';
-  let text = String(url);
-  if (text.startsWith('https://')) text = text.slice(8);
-  else if (text.startsWith('http://')) text = text.slice(7);
-  while (text.endsWith('/')) text = text.slice(0, -1);
-  return text;
-};
-
 // --- 外观 ---
 const themeOptions = [
-  { value: 'dark', label: '深色', desc: '始终使用深色配色', icon: Moon },
-  { value: 'light', label: '浅色', desc: '始终使用浅色配色', icon: Sun },
-  { value: 'auto', label: '跟随系统', desc: '随系统外观自动切换', icon: Monitor }
+  { value: 'dark', label: '深色', icon: Moon },
+  { value: 'light', label: '浅色', icon: Sun },
+  { value: 'auto', label: '跟随系统', icon: Monitor }
 ];
 
 const selectTheme = (value) => {

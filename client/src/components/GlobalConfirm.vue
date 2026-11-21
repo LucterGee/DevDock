@@ -49,8 +49,8 @@ import { useConfirmState, handleAction } from '../utils/confirm';
 const state = useConfirmState();
 
 const confirmBtnClass = computed(() => {
-  if (state.type === 'error') return 'bg-red-600 hover:bg-red-500 shadow-red-900/50';
-  return 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/50';
+  if (state.type === 'error') return 'bg-red-600 hover:bg-red-500';
+  return 'bg-blue-600 hover:bg-blue-500';
 });
 </script>
 

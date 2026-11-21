@@ -76,6 +76,18 @@ html.theme-light {
   --color-yellow-500: #ca8a04;
 }
 
+/* 浅色下阴影柔化
+   Tailwind 4 用 @property 注册 --tw-shadow-color 且 inherits: false，
+   无法在 html 上下发，只能按工具类命中元素本身覆盖。 */
+html.theme-light .shadow-sm,
+html.theme-light .shadow,
+html.theme-light .shadow-md,
+html.theme-light .shadow-lg,
+html.theme-light .shadow-xl,
+html.theme-light .shadow-2xl {
+  --tw-shadow-color: rgba(15, 23, 42, 0.08);
+}
+
 /* 滚动条跟随主题 */
 ::-webkit-scrollbar {
   width: 10px;
