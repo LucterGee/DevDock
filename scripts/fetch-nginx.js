@@ -126,8 +126,19 @@ const fetchMac = () => {
     }
   }
 
+  // macOS 上修改 Mach-O 会让原有签名失效，内核会直接 SIGKILL；
+  // 必须对所有被改动的文件重新做 ad-hoc 签名
+  const signTargets = [outBinary, ...fs.readdirSync(libDir).map((name) => path.join(libDir, name))];
+  for (const target of signTargets) {
+    try {
+      execFileSync('codesign', ['--force', '--sign', '-', target], { stdio: 'ignore' });
+      log('重新签名 ' + path.basename(target));
+    } catch (error) {
+      log('签名失败 ' + path.basename(target) + '：' + error.message);
+    }
+  }
+
   log('完成 -> ' + outDir);
-  log('运行时需设置 DYLD_LIBRARY_PATH=' + libDir);
 };
 
 const main = async () => {
