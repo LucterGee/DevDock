@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { socket } from '../../utils/socket'
 import { useAiConfig } from '../../utils/useAiConfig'
+import { ChevronDown } from 'lucide-vue-next'
 import { defaultDateRange, groupCommits, toggleCommitSelection, toDateInput, type WeeklyReportCommit } from '../../utils/weeklyReport'
 
 type Repository = { id: string; name: string; path: string; enabled: boolean }
@@ -82,6 +83,26 @@ const applyLastReportRange = async () => {
 
 const toggleCommit = (hash: string) => { selectedCommits.value = toggleCommitSelection(selectedCommits.value, hash) }
 
+// 仓库折叠：各自独立，可同时展开多个
+const expandedRepos = ref<Set<string>>(new Set())
+const isRepoOpen = (name: string) => expandedRepos.value.has(name)
+const toggleRepo = (name: string) => {
+  const next = new Set(expandedRepos.value)
+  if (next.has(name)) next.delete(name)
+  else next.add(name)
+  expandedRepos.value = next
+}
+
+// 整仓选择：折叠状态下也可直接勾选
+const repoSelectedCount = (commits: WeeklyReportCommit[]) => commits.filter((c) => selectedCommits.value.has(c.hash)).length
+const repoAllSelected = (commits: WeeklyReportCommit[]) => commits.length > 0 && repoSelectedCount(commits) === commits.length
+const toggleRepoSelection = (commits: WeeklyReportCommit[]) => {
+  const next = new Set(selectedCommits.value)
+  const selectAll = !repoAllSelected(commits)
+  commits.forEach((c) => { if (selectAll) next.add(c.hash); else next.delete(c.hash) })
+  selectedCommits.value = next
+}
+
 const generate = async () => {
   generating.value = true
   try {
@@ -161,8 +182,11 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
         <section class="rounded border border-gray-700 bg-gray-800 p-4">
           <h2 class="mb-3 text-sm font-semibold">本人作者名</h2>
           <label v-for="identity in identities" :key="identity.name" class="mb-2 flex items-start gap-2 text-sm">
-            <input v-model="selectedIdentities" type="checkbox" :value="identity.name" />
-            <span><span class="block">{{ identity.name }}</span><span class="text-[10px] text-gray-500">{{ identity.emails.join(', ') }}</span></span>
+            <input v-model="selectedIdentities" type="checkbox" :value="identity.name" class="mt-1 shrink-0" />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate" :title="identity.name">{{ identity.name }}</span>
+              <span class="block truncate text-[10px] text-gray-500" :title="identity.emails.join('\n')">{{ identity.emails.join(', ') }}</span>
+            </span>
           </label>
         </section>
 
@@ -181,14 +205,41 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
       <section class="space-y-4">
         <div v-if="activity.errors.length" class="rounded border border-yellow-700/50 bg-yellow-900/20 p-3 text-xs text-yellow-300">部分仓库采集失败：{{ activity.errors.map((error) => error.message).join('；') }}</div>
 
-        <div class="grid gap-3 md:grid-cols-2">
-          <article v-for="(commits, name) in grouped" :key="name" class="rounded border border-gray-700 bg-gray-800 p-4">
-            <h2 class="mb-2 text-sm font-semibold text-blue-300">{{ name }}</h2>
-            <label v-for="commit in commits" :key="commit.hash" class="mb-2 flex gap-2 text-sm">
-              <input type="checkbox" :checked="selectedCommits.has(commit.hash)" @change="toggleCommit(commit.hash)" />
-              <span><span class="block">{{ commit.subject }}</span><span class="text-[10px] text-gray-500">{{ commit.hash }} · {{ commit.authoredAt }}</span></span>
-            </label>
-          </article>
+        <div class="space-y-2">
+          <div v-for="(commits, name) in grouped" :key="name" class="rounded border border-gray-700 bg-gray-800">
+            <div
+              class="flex cursor-pointer select-none items-center gap-2 px-3 py-2 transition hover:bg-gray-700/30"
+              @click="toggleRepo(String(name))"
+            >
+              <input
+                type="checkbox"
+                class="shrink-0"
+                :checked="repoAllSelected(commits)"
+                @click.stop
+                @change="toggleRepoSelection(commits)"
+              />
+              <span class="min-w-0 flex-1 truncate text-sm font-semibold text-blue-300" :title="String(name)">{{ name }}</span>
+              <span class="shrink-0 font-mono text-[11px] text-gray-500">{{ repoSelectedCount(commits) }}/{{ commits.length }}</span>
+              <ChevronDown
+                class="h-4 w-4 shrink-0 text-gray-500 transition-transform"
+                :class="isRepoOpen(String(name)) ? 'rotate-180' : ''"
+              />
+            </div>
+
+            <div v-show="isRepoOpen(String(name))" class="border-t border-gray-700/60">
+              <label
+                v-for="commit in commits"
+                :key="commit.hash"
+                class="flex gap-2 border-t border-gray-700/40 px-3 py-2 text-sm first:border-t-0"
+              >
+                <input type="checkbox" class="mt-1 shrink-0" :checked="selectedCommits.has(commit.hash)" @change="toggleCommit(commit.hash)" />
+                <span class="min-w-0">
+                  <span class="block">{{ commit.subject }}</span>
+                  <span class="block truncate text-[10px] text-gray-500">{{ commit.hash.slice(0, 7) }} · {{ commit.authoredAt }}</span>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <section class="rounded border border-gray-700 bg-gray-800 p-4">
