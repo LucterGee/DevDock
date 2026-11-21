@@ -24,11 +24,8 @@ const { discoverAuthors, collectActivity, runGit } = require('./services/weeklyR
 const { buildReportContext } = require('./services/weeklyReport/reportContext');
 const { generateText } = require('./services/ai/generateText');
 const {
-  PROJECT_TAGS_BY_PATH_KEY,
   WECHAT_DEVTOOLS_CONFIG_KEY,
-  isMiniProgramTagged,
   hasWeChatProjectConfig,
-  normalizeProjectTagsByPath,
   normalizeWechatDevtoolsConfig,
   resolveWechatLaunchSpec,
 } = require('./utils/projectTools');
@@ -123,11 +120,6 @@ const writeConfigFile = (data) => {
 const readWechatDevtoolsConfig = () => {
   const allConfig = readConfigFile();
   return normalizeWechatDevtoolsConfig(allConfig[WECHAT_DEVTOOLS_CONFIG_KEY]);
-};
-
-const readProjectTagsByPath = () => {
-  const allConfig = readConfigFile();
-  return normalizeProjectTagsByPath(allConfig[PROJECT_TAGS_BY_PATH_KEY]);
 };
 
 const resolveTargetNodeVersion = (projectPath, requestedVersion) => {
@@ -930,7 +922,6 @@ if ($folder) { $folder.Self.Path }
     const overrides = config.node_version_overrides || {};
     const tunnelConfig = normalizeTunnelConfig(config[TUNNEL_CONFIG_KEY]);
     const manualProjectPorts = tunnelConfig.projectPorts || {};
-    const projectTagsByPath = normalizeProjectTagsByPath(config[PROJECT_TAGS_BY_PATH_KEY]);
 
     return projects.map(p => {
       // 同步运行状态
@@ -968,9 +959,7 @@ if ($folder) { $folder.Self.Path }
       const effectiveTunnelPort = hasManualPort ? manualPort : autoPortInfo.port;
       const tunnelPortSource = hasManualPort ? 'manual' : 'auto';
       const commandEntry = commandProcesses.get(p.path);
-      // 自动识别（项目根目录存在 project.config.json）或沿用配置中的手动标记
-      const isMiniProgram =
-        hasWeChatProjectConfig(p.path) || isMiniProgramTagged(projectTagsByPath, p.path);
+      const isMiniProgram = hasWeChatProjectConfig(p.path);
 
       return {
         ...p,
@@ -1433,8 +1422,7 @@ if ($folder) { $folder.Self.Path }
       return;
     }
 
-    const projectTagsByPath = readProjectTagsByPath();
-    if (!isMiniProgramTagged(projectTagsByPath, projectPath)) {
+    if (!hasWeChatProjectConfig(projectPath)) {
       callback?.({ success: false, error: '该项目未检测到 project.config.json，不视为小程序项目' });
       return;
     }
@@ -1541,8 +1529,6 @@ if ($folder) { $folder.Self.Path }
     let value = allData[key] || null; // 取出对应 key 的值
     if (key === WECHAT_DEVTOOLS_CONFIG_KEY) {
       value = normalizeWechatDevtoolsConfig(value);
-    } else if (key === PROJECT_TAGS_BY_PATH_KEY) {
-      value = normalizeProjectTagsByPath(value);
     } else if (key === TERMINAL_CONFIG_KEY) {
       value = normalizeTerminalConfig(value);
     }
@@ -1556,8 +1542,6 @@ if ($folder) { $folder.Self.Path }
     let normalizedValue = value;
     if (key === WECHAT_DEVTOOLS_CONFIG_KEY) {
       normalizedValue = normalizeWechatDevtoolsConfig(value);
-    } else if (key === PROJECT_TAGS_BY_PATH_KEY) {
-      normalizedValue = normalizeProjectTagsByPath(value);
     } else if (key === TERMINAL_CONFIG_KEY) {
       normalizedValue = normalizeTerminalConfig(value);
     }

@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 
 const WECHAT_DEVTOOLS_CONFIG_KEY = 'wechat_devtools_config';
-const PROJECT_TAGS_BY_PATH_KEY = 'project_tags_by_path';
 
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -13,30 +12,6 @@ function normalizeWechatDevtoolsConfig(rawConfig) {
     windowsPath: trimString(source.windowsPath),
     macosPath: trimString(source.macosPath),
   };
-}
-
-function normalizeProjectTagsByPath(rawConfig) {
-  const source = rawConfig && typeof rawConfig === 'object' && !Array.isArray(rawConfig)
-    ? rawConfig
-    : {};
-  const result = {};
-
-  Object.entries(source).forEach(([projectPath, value]) => {
-    if (!projectPath || !value || typeof value !== 'object' || Array.isArray(value)) return;
-    if (!Object.prototype.hasOwnProperty.call(value, 'isMiniProgram')) return;
-
-    result[projectPath] = {
-      isMiniProgram: value.isMiniProgram === true,
-    };
-  });
-
-  return result;
-}
-
-function isMiniProgramTagged(projectTagsByPath, projectPath) {
-  if (!projectPath) return false;
-  const normalizedTags = normalizeProjectTagsByPath(projectTagsByPath);
-  return normalizedTags[projectPath]?.isMiniProgram === true;
 }
 
 function getWechatCliCandidates(configuredPath, platform = process.platform) {
@@ -253,15 +228,12 @@ function hasWeChatProjectConfig(projectPath) {
 }
 
 module.exports = {
-  PROJECT_TAGS_BY_PATH_KEY,
   WECHAT_DEVTOOLS_CONFIG_KEY,
   getWechatCliCandidates,
   getWechatLaunchCandidates,
   getWechatLaunchSpec,
   getWeChatProjectConfigPath,
   hasWeChatProjectConfig,
-  isMiniProgramTagged,
-  normalizeProjectTagsByPath,
   normalizeWechatDevtoolsConfig,
   resolveWechatLaunchSpec,
   resolveWechatCliPath,

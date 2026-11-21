@@ -462,7 +462,7 @@
                       :key="preset.id"
                       :value="preset.id"
                     >
-                      {{ preset.label }}{{ preset.available === false ? '（未检测到）' : '' }}
+                      {{ preset.label }}
                     </option>
                     <option value="custom">自定义…</option>
                   </select>

@@ -7,8 +7,6 @@ const {
   resolveWechatLaunchSpec,
   resolveWechatCliPath,
   normalizeWechatDevtoolsConfig,
-  normalizeProjectTagsByPath,
-  isMiniProgramTagged,
   getWechatCliCandidates,
 } = require('./projectTools');
 
@@ -22,31 +20,6 @@ test('normalizeWechatDevtoolsConfig trims configured platform paths', () => {
     windowsPath: 'C:\\Program Files\\WeChat\\cli.bat',
     macosPath: '/Applications/wechatwebdevtools.app',
   });
-});
-
-test('normalizeProjectTagsByPath keeps only object entries and boolean flags', () => {
-  const result = normalizeProjectTagsByPath({
-    'D:\\demo\\a': { isMiniProgram: true },
-    'D:\\demo\\b': { isMiniProgram: false },
-    'D:\\demo\\c': null,
-    'D:\\demo\\d': 'mini',
-  });
-
-  assert.deepEqual(result, {
-    'D:\\demo\\a': { isMiniProgram: true },
-    'D:\\demo\\b': { isMiniProgram: false },
-  });
-});
-
-test('isMiniProgramTagged returns true only for explicitly tagged projects', () => {
-  const projectTags = {
-    'D:\\demo\\mini': { isMiniProgram: true },
-    'D:\\demo\\web': { isMiniProgram: false },
-  };
-
-  assert.equal(isMiniProgramTagged(projectTags, 'D:\\demo\\mini'), true);
-  assert.equal(isMiniProgramTagged(projectTags, 'D:\\demo\\web'), false);
-  assert.equal(isMiniProgramTagged(projectTags, 'D:\\demo\\missing'), false);
 });
 
 test('getWechatCliCandidates derives cli.bat from a Windows install directory', () => {

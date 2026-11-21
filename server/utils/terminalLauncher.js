@@ -5,37 +5,19 @@ const path = require('path');
 const TERMINAL_CONFIG_KEY = 'terminal_config';
 
 const DARWIN_PRESETS = [
-  {
-    id: 'terminal',
-    label: 'Terminal.app（系统默认）',
-    bundleId: 'com.apple.Terminal',
-    appName: 'Terminal',
-    appPaths: ['/System/Applications/Utilities/Terminal.app', '/Applications/Utilities/Terminal.app'],
-  },
-  {
-    id: 'iterm2',
-    label: 'iTerm2',
-    bundleId: 'com.googlecode.iterm2',
-    appName: 'iTerm',
-    appPaths: ['/Applications/iTerm.app', '/Applications/iTerm2.app'],
-  },
-  { id: 'warp', label: 'Warp', bundleId: 'dev.warp.Warp-Stable', appName: 'Warp', appPaths: ['/Applications/Warp.app'] },
-  { id: 'ghostty', label: 'Ghostty', bundleId: 'com.mitchellh.ghostty', appName: 'Ghostty', appPaths: ['/Applications/Ghostty.app'] },
-  { id: 'wezterm', label: 'WezTerm', bundleId: 'com.github.wez.wezterm', appName: 'WezTerm', appPaths: ['/Applications/WezTerm.app'] },
-  { id: 'kitty', label: 'kitty', bundleId: 'net.kovidgoyal.kitty', appName: 'kitty', appPaths: ['/Applications/kitty.app'] },
-  { id: 'alacritty', label: 'Alacritty', bundleId: 'org.alacritty', appName: 'Alacritty', appPaths: ['/Applications/Alacritty.app'] },
+  { id: 'terminal', label: 'Terminal.app（系统默认）', bundleId: 'com.apple.Terminal', appName: 'Terminal' },
+  { id: 'iterm2', label: 'iTerm2', bundleId: 'com.googlecode.iterm2', appName: 'iTerm' },
+  { id: 'warp', label: 'Warp', bundleId: 'dev.warp.Warp-Stable', appName: 'Warp' },
+  { id: 'ghostty', label: 'Ghostty', bundleId: 'com.mitchellh.ghostty', appName: 'Ghostty' },
+  { id: 'wezterm', label: 'WezTerm', bundleId: 'com.github.wez.wezterm', appName: 'WezTerm' },
+  { id: 'kitty', label: 'kitty', bundleId: 'net.kovidgoyal.kitty', appName: 'kitty' },
+  { id: 'alacritty', label: 'Alacritty', bundleId: 'org.alacritty', appName: 'Alacritty' },
 ];
 
 const WIN32_PRESETS = [
-  { id: 'cmd', label: '命令提示符（cmd）', available: true },
-  { id: 'powershell', label: 'PowerShell', available: true },
-  {
-    id: 'wt',
-    label: 'Windows Terminal（wt）',
-    probePaths: [
-      path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WindowsApps', 'wt.exe'),
-    ],
-  },
+  { id: 'cmd', label: '命令提示符（cmd）' },
+  { id: 'powershell', label: 'PowerShell' },
+  { id: 'wt', label: 'Windows Terminal（wt）' },
   {
     id: 'gitbash',
     label: 'Git Bash',
@@ -47,7 +29,7 @@ const WIN32_PRESETS = [
 ];
 
 const LINUX_PRESETS = [
-  { id: 'auto', label: '自动检测', available: true },
+  { id: 'auto', label: '自动检测' },
   { id: 'gnome-terminal', label: 'GNOME Terminal' },
   { id: 'konsole', label: 'Konsole' },
   { id: 'kitty', label: 'kitty' },
@@ -80,29 +62,10 @@ const expandHome = (value) => {
   return raw;
 };
 
-const isPresetAvailable = (preset, platform, fileExists) => {
-  if (preset.available === true) return true;
-
-  const probePaths = [
-    ...(preset.appPaths || []),
-    ...(preset.probePaths || []),
-  ].filter(Boolean);
-
-  if (probePaths.length === 0) return null;
-
-  if (preset.appPaths && platform === 'darwin') {
-    const userApp = path.join(os.homedir(), 'Applications', `${preset.appName}.app`);
-    if (fileExists(userApp)) return true;
-  }
-
-  return probePaths.some((item) => fileExists(item));
-};
-
-const getTerminalPresets = (platform = process.platform, fileExists = fs.existsSync) => {
+const getTerminalPresets = (platform = process.platform) => {
   return getPresetList(platform).map((preset) => ({
     id: preset.id,
     label: preset.label,
-    available: isPresetAvailable(preset, platform, fileExists),
   }));
 };
 
