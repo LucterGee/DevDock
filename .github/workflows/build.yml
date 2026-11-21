@@ -52,7 +52,7 @@ jobs:
       # 7. 后端单元测试（用 bash 以保证通配符在 Windows runner 上也能展开）
       - name: Run Server Tests
         shell: bash
-        run: node --test server/utils/*.test.js
+        run: node --test server/utils/*.test.js server/services/*/*.test.js
 
       # 8. 执行打包 (关键修复：跳过 Mac 签名)
       - name: Build Electron App
