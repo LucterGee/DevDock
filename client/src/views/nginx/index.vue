@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { Download, FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import RouteEditor from './RouteEditor.vue'
 import {
@@ -267,6 +267,15 @@ const exportConfig = () => run(async () => {
 })
 
 
+const variableListRef = ref<HTMLElement | null>(null)
+
+const addVariable = async () => {
+  settingsDraft.value.variables.push({ name: '', value: '' })
+  await nextTick()
+  const list = variableListRef.value
+  if (list) list.scrollTop = list.scrollHeight
+}
+
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
 const settingsDraft = ref({
@@ -496,12 +505,12 @@ onMounted(() => run(load))
     </main>
 
     <div v-if="settingsOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="settingsOpen = false">
-      <div class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
+      <div class="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
         <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
           <h3 class="text-sm font-semibold text-gray-100">Nginx 设置</h3>
           <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="settingsOpen = false"><X class="h-4 w-4" /></button>
         </div>
-        <div class="space-y-4 p-4">
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           <label class="block">
             <span class="mb-1 block text-xs text-gray-400">端口</span>
             <input
@@ -512,7 +521,7 @@ onMounted(() => run(load))
           </label>
 
           <div class="border-t border-gray-700 pt-4">
-            <div class="space-y-2">
+            <div ref="variableListRef" class="max-h-44 space-y-2 overflow-y-auto pr-1">
               <div v-for="(variable, index) in settingsDraft.variables" :key="index" class="flex items-center gap-2">
                 <input
                   v-model="variable.name"
@@ -533,7 +542,7 @@ onMounted(() => run(load))
             </div>
             <button
               class="mt-2 flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
-              @click="settingsDraft.variables.push({ name: '', value: '' })"
+              @click="addVariable"
             >
               <Plus class="h-3.5 w-3.5" />新增变量
             </button>
