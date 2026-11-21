@@ -51,7 +51,7 @@ main.js (Electron 主进程)
 - `scan-dir` / `open-folder-dialog` — 项目扫描与目录选择
 - `start-task` / `stop-task` — 脚本执行与进程管理
 - `git:get-diff` / `git:commit` — Git 操作
-- `config:load` / `config:save` — 持久化配置（存储于 `~/.terminalManage-config.json`）
+- `config:load` / `config:save` — 持久化配置（存储于 `~/.devdock-config.json`）
 - `proxy:claude` — AI 代理请求
 - `monitor:update` — 进程资源监控广播（每 2 秒）
 

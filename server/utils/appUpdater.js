@@ -25,7 +25,7 @@ const state = {
   appName:
     ROOT_PACKAGE?.build?.productName ||
     ROOT_PACKAGE?.name ||
-    'terminalManage',
+    'DevDock',
   currentVersion: String(ROOT_PACKAGE?.version || '0.0.0'),
   supported: false,
   enabled: false,

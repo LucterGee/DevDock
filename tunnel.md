@@ -1,10 +1,10 @@
 # Tunnel 使用教程
 
-本文介绍如何在 `terminalManage` 中配置并使用 Cloudflare Tunnel，把本地开发服务安全暴露到公网。
+本文介绍如何在 `DevDock` 中配置并使用 Cloudflare Tunnel，把本地开发服务安全暴露到公网。
 
 ## 1. 前提条件
 
-在使用 terminalManage 的 Tunnel 功能前，需要先在 Cloudflare 完成以下准备：
+在使用 DevDock 的 Tunnel 功能前，需要先在 Cloudflare 完成以下准备：
 
 1. 你的域名已接入并托管到 Cloudflare（DNS 可在 Cloudflare 管理）。
 2. 在 Cloudflare Zero Trust 中创建 Tunnel，并获取 `cloudflared tunnel run token`。
@@ -16,7 +16,7 @@
 
 - `Public Hostname`：填写你要对外访问的域名（如 `dev.example.com`）
 - `Service Type`：`HTTP`
-- `URL`：`http://127.0.0.1:26324`（terminalManage 内置 Tunnel 网关）
+- `URL`：`http://127.0.0.1:26324`（DevDock 内置 Tunnel 网关）
 
 控制台路径参考（Cloudflare 后台）：
 
@@ -25,7 +25,7 @@
 3. 进入 `Networks` -> `Tunnels`（部分账号界面可能显示为 `Access` -> `Tunnels`）  
 4. 选择已创建 Tunnel，添加或编辑 `Public Hostname` 路由  
 
-完成上述配置后，再回到 terminalManage 进行参数填写和启动。
+完成上述配置后，再回到 DevDock 进行参数填写和启动。
 
 ## 2. 准备信息
 
@@ -35,7 +35,7 @@
 - 对应的公网访问域名（Public Domain）
 
 
-## 3. 在 terminalManage 中配置 Tunnel
+## 3. 在 DevDock 中配置 Tunnel
 
 打开右上角设置，进入 `Tunnel` 面板，填写以下内容：
 
@@ -45,7 +45,7 @@
 
 填写完成后，点击 `Start cloudflared` 启动隧道。
 
-![terminalManage Tunnel 设置界面](./client/public/tunnel.png)
+![DevDock Tunnel 设置界面](./client/public/tunnel.png)
 
 ## 4. 日常使用流程
 
@@ -67,7 +67,7 @@
 ## 6. 相关说明
 
 - 内置 Tunnel 网关地址：`127.0.0.1:26324`
-- 配置存储于：`~/.terminalManage-config.json` 的 `ai_tunnel_config` 字段
+- 配置存储于：`~/.devdock-config.json` 的 `ai_tunnel_config` 字段
 
 ## 7. 热更新注意事项（Vite / Webpack）
 

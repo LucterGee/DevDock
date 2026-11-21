@@ -6,7 +6,7 @@
   "author": "kuyep",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WEBNSNM/dev-manage.git"
+    "url": "https://github.com/LucterGee/DevDock.git"
   },
   "scripts": {
     "server": "cd server && node index.js",
@@ -47,7 +47,7 @@
       {
         "provider": "github",
         "owner": "LucterGee",
-        "repo": "terminal-Manage"
+        "repo": "DevDock"
       }
     ],
     "files": [

@@ -31,9 +31,33 @@ const {
 } = require('./utils/projectTools');
 
 // 配置文件存在用户目录下，防止误删
-const CONFIG_PATH = path.join(os.homedir(), '.terminalManage-config.json');
-const WEEKLY_REPORT_STATE_PATH = path.join(os.homedir(), '.terminalManage-weekly-report.json');
-const WEEKLY_REPORT_CACHE_PATH = path.join(os.homedir(), '.terminalManage-weekly-report-cache.json');
+const CONFIG_PATH = path.join(os.homedir(), '.devdock-config.json');
+const WEEKLY_REPORT_STATE_PATH = path.join(os.homedir(), '.devdock-weekly-report.json');
+const WEEKLY_REPORT_CACHE_PATH = path.join(os.homedir(), '.devdock-weekly-report-cache.json');
+
+// 旧版本（terminalManage）的文件名 → 新文件名。
+// 首次启动时若新文件不存在而旧文件存在，则复制一份（旧文件保留作备份）。
+const LEGACY_FILE_RENAMES = [
+  ['.terminalManage-config.json', '.devdock-config.json'],
+  ['.terminalManage-weekly-report.json', '.devdock-weekly-report.json'],
+  ['.terminalManage-weekly-report-cache.json', '.devdock-weekly-report-cache.json']
+];
+
+const migrateLegacyFiles = () => {
+  for (const [legacyName, nextName] of LEGACY_FILE_RENAMES) {
+    const legacyPath = path.join(os.homedir(), legacyName);
+    const nextPath = path.join(os.homedir(), nextName);
+    try {
+      if (fs.existsSync(nextPath) || !fs.existsSync(legacyPath)) continue;
+      fs.copyFileSync(legacyPath, nextPath);
+      console.log("[migrate] " + legacyName + " -> " + nextName);
+    } catch (error) {
+      console.error("[migrate] 迁移 " + legacyName + " 失败:", error.message);
+    }
+  }
+};
+
+migrateLegacyFiles();
 const weeklyReportRuntime = createWeeklyReportRuntime({
   statePath: WEEKLY_REPORT_STATE_PATH,
   cachePath: WEEKLY_REPORT_CACHE_PATH
@@ -809,7 +833,7 @@ io.on('connection', (socket) => {
   socket.on('app:get-version', (callback) => {
     const updaterState = appUpdater.getState();
     callback?.({
-      appName: updaterState.appName || 'terminalManage',
+      appName: updaterState.appName || 'DevDock',
       version: updaterState.currentVersion || '0.0.0'
     });
   });
@@ -1623,7 +1647,7 @@ if ($folder) { $folder.Self.Path }
     try {
       const electron = require('electron');
       const Notification = electron?.Notification;
-      const safeTitle = String(title || 'terminalManage').trim() || 'terminalManage';
+      const safeTitle = String(title || 'DevDock').trim() || 'DevDock';
       const safeBody = String(body || '').trim() || '倒计时结束';
 
       if (!Notification || typeof Notification.isSupported !== 'function' || !Notification.isSupported()) {

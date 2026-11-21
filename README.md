@@ -8,17 +8,17 @@
     基于 Electron 33 + Vue 3 + Express 5 构建，专为前端开发者打造的高效本地工作台。
   </p>
 
-  <a href="https://github.com/WEBNSNM/dev-manage/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/WEBNSNM/dev-manage/build.yml?label=Build&style=flat-square" alt="Build Status">
+  <a href="https://github.com/LucterGee/DevDock/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/LucterGee/DevDock/build.yml?label=Build&style=flat-square" alt="Build Status">
   </a>
   <img src="https://img.shields.io/badge/Electron-v33.0-blue?style=flat-square&logo=electron" alt="Electron Version">
   <img src="https://img.shields.io/badge/Node-v22.x-green?style=flat-square&logo=node.js" alt="Node Version">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey?style=flat-square" alt="Platform">
-  <img src="https://img.shields.io/github/license/WEBNSNM/dev-manage?style=flat-square" alt="License">
+  <img src="https://img.shields.io/github/license/LucterGee/DevDock?style=flat-square" alt="License">
 
   <br><br>
 
-  [下载最新版本](https://github.com/WEBNSNM/dev-manage/releases/latest) · [报告 Bug](https://github.com/WEBNSNM/dev-manage/issues)
+  [下载最新版本](https://github.com/LucterGee/DevDock/releases/latest) · [报告 Bug](https://github.com/LucterGee/DevDock/issues)
 </div>
 
 ---
@@ -149,7 +149,7 @@
 
 ## 下载与安装
 
-请访问 [GitHub Releases](https://github.com/WEBNSNM/dev-manage/releases) 页面下载：
+请访问 [GitHub Releases](https://github.com/LucterGee/DevDock/releases) 页面下载：
 
 | 操作系统 | 文件类型 | 说明 |
 | :--- | :--- | :--- |
@@ -168,8 +168,8 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/WEBNSNM/dev-manage.git
-cd dev-manage
+git clone https://github.com/LucterGee/DevDock.git
+cd DevDock
 
 # 安装依赖
 pnpm install
@@ -197,7 +197,7 @@ git push origin v1.0.0
 
 ## 配置文件
 
-用户配置持久化存储在 `~/.terminalManage-config.json`，包含：
+用户配置持久化存储在 `~/.devdock-config.json`，包含：
 
 - `ai_config_list` — AI 模型配置列表
 - `ai_active_id` — 当前激活的 AI 模型
@@ -213,7 +213,7 @@ Thanks to [linux社区](linux.do) — 前端终端集成效能工具
 
 周报页面地址为 `#/weekly-report`。支持导入 Git 仓库、选择需要精确匹配的 Git 作者名、按日期范围采集提交、审核本次纳入的提交，以及生成可继续编辑的 Markdown 周报。
 
-周报配置与历史记录保存在本地的 `~/.terminalManage-weekly-report.json`，活动缓存保存在 `~/.terminalManage-weekly-report-cache.json`。默认只采集 Git 提交元数据和文件变更统计，不读取源代码差异；只有明确请求提交详情时才会读取经过长度限制的 patch。
+周报配置与历史记录保存在本地的 `~/.devdock-weekly-report.json`，活动缓存保存在 `~/.devdock-weekly-report-cache.json`。默认只采集 Git 提交元数据和文件变更统计，不读取源代码差异；只有明确请求提交详情时才会读取经过长度限制的 patch。
 
 在 AI 设置中为周报场景选择模型后，可以使用 DeepSeek（OpenAI 兼容接口）、Gemini（原生 `generateContent` 接口）或 OpenAI Responses API。发送给模型前，系统会对周报上下文进行路径脱敏和长度限制。
 
