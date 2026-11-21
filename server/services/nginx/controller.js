@@ -105,6 +105,26 @@ const createNginxController = (options = {}) => {
     return { confPath: target.confPath, content };
   };
 
+  // 首次使用（或配置被删）时先落一份默认配置，避免 nginx -t 直接报文件不存在
+  const ensureConfig = () => {
+    const target = ensureDirs();
+    if (!fs.existsSync(target.confPath)) writeConfig();
+    return target.confPath;
+  };
+
+  // 打包进 Resources 的 dylib 通过 @loader_path 引用，这里再兜一层搜索路径
+  const buildEnv = () => {
+    const env = { ...process.env };
+    if (platform === 'darwin') {
+      const libDir = path.join(path.dirname(binaryPath()), 'lib');
+      if (fs.existsSync(libDir)) {
+        env.DYLD_LIBRARY_PATH = [libDir, env.DYLD_LIBRARY_PATH].filter(Boolean).join(':');
+        env.DYLD_FALLBACK_LIBRARY_PATH = env.DYLD_LIBRARY_PATH;
+      }
+    }
+    return env;
+  };
+
   const run = (action) => new Promise((resolve) => {
     const binary = binaryPath();
     if (!fs.existsSync(binary)) {
@@ -117,8 +137,9 @@ const createNginxController = (options = {}) => {
     }
 
     const target = paths();
+    if (action !== 'stop') ensureConfig();
     const args = buildArgs({ prefixDir: target.prefixDir, confPath: target.confPath, action });
-    execFileImpl(binary, args, { timeout: 15000 }, (error, stdout, stderr) => {
+    execFileImpl(binary, args, { timeout: 15000, env: buildEnv() }, (error, stdout, stderr) => {
       resolve({
         ok: !error,
         code: error ? error.code || 'EXEC_FAILED' : 'OK',
@@ -155,6 +176,7 @@ const createNginxController = (options = {}) => {
     binaryInstalled,
     paths,
     ensureDirs,
+    ensureConfig,
     writeConfig,
     status,
     test: () => run('test'),

@@ -15,6 +15,7 @@ const createNginxRuntime = (options = {}) => {
 
   const overview = () => {
     const current = state();
+    if (controller.ensureConfig) controller.ensureConfig();
     const status = controller.status();
     const scan = store.scan();
     const variables = (current.nginx && current.nginx.variables) || [];

@@ -84,18 +84,46 @@ const fetchMac = () => {
   fs.chmodSync(path.join(outDir, 'nginx'), 0o755);
   log('复制二进制 ' + binary);
 
-  // 收集非系统依赖（pcre2 / openssl 等）
-  const otool = execFileSync('otool', ['-L', binary], { encoding: 'utf8' });
-  const deps = otool
-    .split('\n')
-    .slice(1)
-    .map((line) => line.trim().split(' ')[0])
-    .filter((dep) => dep && !dep.startsWith('/usr/lib/') && !dep.startsWith('/System/'));
+  const listDeps = (file) => {
+    const otool = execFileSync('otool', ['-L', file], { encoding: 'utf8' });
+    return otool
+      .split('\n')
+      .slice(1)
+      .map((line) => line.trim().split(' ')[0])
+      .filter((dep) => dep && !dep.startsWith('/usr/lib/') && !dep.startsWith('/System/'));
+  };
 
-  for (const dep of deps) {
-    const target = path.join(libDir, path.basename(dep));
-    if (!fs.existsSync(target)) fs.copyFileSync(dep, target);
-    log('收集依赖 ' + path.basename(dep));
+  // 把依赖拷进 lib/，并把二进制与 dylib 里的绝对路径改写成 @loader_path，
+  // 否则在没有 Homebrew 的机器上会因为找不到 /opt/homebrew/... 而起不来
+  const outBinary = path.join(outDir, 'nginx');
+  const queue = listDeps(binary).map((dep) => ({ dep, owner: outBinary }));
+
+  while (queue.length) {
+    const { dep, owner } = queue.shift();
+    const name = path.basename(dep);
+    const target = path.join(libDir, name);
+    const isBinaryOwner = owner === outBinary;
+
+    if (!fs.existsSync(target)) {
+      fs.copyFileSync(dep, target);
+      fs.chmodSync(target, 0o755);
+      log('收集依赖 ' + name);
+      for (const nested of listDeps(target)) {
+        queue.push({ dep: nested, owner: target });
+      }
+    }
+
+    const newRef = isBinaryOwner ? '@loader_path/lib/' + name : '@loader_path/' + name;
+    try {
+      execFileSync('install_name_tool', ['-change', dep, newRef, owner]);
+    } catch (error) {
+      log('改写 ' + name + ' 的引用失败：' + error.message);
+    }
+    try {
+      execFileSync('install_name_tool', ['-id', '@loader_path/' + name, target]);
+    } catch (error) {
+      // 部分 dylib 没有 LC_ID_DYLIB，忽略
+    }
   }
 
   log('完成 -> ' + outDir);

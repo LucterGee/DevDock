@@ -61,6 +61,15 @@ jobs:
         shell: bash
         run: node --test server/utils/*.test.js server/services/*/*.test.js
 
+      # 7.5 打包前确认内置 nginx 真的存在且可执行（防止静默发出残缺包）
+      - name: Verify bundled nginx
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then BIN=resources/nginx/darwin/nginx; else BIN=resources/nginx/win32/nginx.exe; fi
+          if [ ! -f "$BIN" ]; then echo "内置 nginx 缺失: $BIN"; exit 1; fi
+          echo "找到: $BIN"
+          "$BIN" -v
+
       # 8. 执行打包 (关键修复：跳过 Mac 签名)
       - name: Build Electron App
         run: npm run dist
