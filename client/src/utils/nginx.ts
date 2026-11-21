@@ -26,6 +26,8 @@ export type NginxStatus = {
   logDir: string
 }
 
+export type NginxVariable = { name: string; value: string }
+
 export type NginxConflict = { id: string; path: string }
 export type NginxUntracked = { name: string; path: string }
 
@@ -35,6 +37,8 @@ export type NginxOverview = {
   routes: NginxRoute[]
   conflicts: NginxConflict[]
   untracked: NginxUntracked[]
+  variables: NginxVariable[]
+  missingVariables: string[]
 }
 
 export type NginxActionResult = { ok: boolean; code: string; error: string }

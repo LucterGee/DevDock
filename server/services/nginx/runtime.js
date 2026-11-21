@@ -1,4 +1,4 @@
-const { parseNginxConfig } = require('./parser');
+const { parseNginxConfig, slugify } = require('./parser');
 const { locationToRoute } = require('./generator');
 const { createNginxStore } = require('./routeStore');
 const { createNginxController } = require('./controller');
@@ -31,9 +31,20 @@ const createNginxRuntime = (options = {}) => {
 
   const findRoute = (current, id) => (current.routes || []).find((item) => item.id === id) || null;
 
+  // 新建路由时由后端生成 id，避免前端各自造 id 造成冲突
+  const makeRouteId = (current, route) => {
+    const base = slugify(route.path || 'route');
+    const used = new Set((current.routes || []).map((item) => item.id));
+    if (!used.has(base)) return base;
+    let index = 2;
+    while (used.has(base + '-' + index)) index += 1;
+    return base + '-' + index;
+  };
+
   const upsertRoute = (route) => {
     const current = state();
     const routes = Array.isArray(current.routes) ? current.routes : [];
+    if (!route.id) route = { ...route, id: makeRouteId(current, route) };
     const index = routes.findIndex((item) => item.id === route.id);
     if (index >= 0) routes[index] = { ...routes[index], ...route };
     else routes.push(route);

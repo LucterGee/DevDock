@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { FileText, FolderOpen, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import { FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import RouteEditor from './RouteEditor.vue'
 import {
   nginxCall,
   type NginxActionResult,
@@ -10,12 +11,15 @@ import {
   type NginxRoute,
   type NginxStatus,
   type NginxTarget,
-  type NginxValidateResult
+  type NginxValidateResult,
+  type NginxVariable
 } from '../../utils/nginx'
 
 const status = ref<NginxStatus | null>(null)
 const routes = ref<NginxRoute[]>([])
 const conflicts = ref<NginxConflict[]>([])
+const variables = ref<NginxVariable[]>([])
+const missingVariables = ref<string[]>([])
 const selectedId = ref('')
 const search = ref('')
 const noteDraft = ref('')
@@ -58,6 +62,8 @@ const load = async () => {
   status.value = overview.status
   routes.value = overview.routes || []
   conflicts.value = overview.conflicts || []
+  variables.value = overview.variables || []
+  missingVariables.value = overview.missingVariables || []
   nginxSettings.value = (overview.state as any)?.nginx || null
   if (!routes.value.some((route) => route.id === selectedId.value)) {
     selectedId.value = routes.value[0]?.id || ''
@@ -97,6 +103,53 @@ const removeRoute = () => run(async () => {
   if (!ok) return
   await nginxCall<{ removed: boolean }>('nginx:route:remove', { id: route.id })
   selectedId.value = ''
+  await load()
+})
+
+const editorOpen = ref(false)
+const editorRoute = ref<NginxRoute | null>(null)
+
+const emptyRoute = (): NginxRoute => ({
+  id: '',
+  path: '',
+  note: '',
+  enabled: true,
+  kind: 'proxy',
+  activeTargetId: '',
+  targets: [{ id: 'target-1', label: '', proxyPass: '', referer: '' }],
+  headers: { httpVersion: true, host: true, upgrade: true, connection: true },
+  others: [],
+  rawBody: ''
+})
+
+const cloneRoute = (route: NginxRoute): NginxRoute => ({
+  ...route,
+  targets: (route.targets || []).map((target) => ({ ...target })),
+  headers: { ...route.headers },
+  others: (route.others || []).map((item) => ({ ...item }))
+})
+
+const openCreate = () => {
+  editorRoute.value = emptyRoute()
+  editorOpen.value = true
+}
+
+const openEdit = () => {
+  if (!selected.value) return
+  editorRoute.value = cloneRoute(selected.value)
+  editorOpen.value = true
+}
+
+const closeEditor = () => {
+  editorOpen.value = false
+  editorRoute.value = null
+}
+
+const submitRoute = (route: NginxRoute) => run(async () => {
+  const saved = await nginxCall<NginxRoute>('nginx:route:save', { route })
+  window.$toast?.success?.('已保存')
+  closeEditor()
+  selectedId.value = saved.id
   await load()
 })
 
@@ -167,7 +220,14 @@ const submitImport = () => run(async () => {
 
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
-const settingsDraft = ref({ port: 18080, routesDir: '', logDir: '', accessLogEnabled: false, accessLogPath: '' })
+const settingsDraft = ref({
+  port: 18080,
+  routesDir: '',
+  logDir: '',
+  accessLogEnabled: false,
+  accessLogPath: '',
+  variables: [] as NginxVariable[]
+})
 
 const openSettings = () => {
   const current = nginxSettings.value || {}
@@ -176,7 +236,8 @@ const openSettings = () => {
     routesDir: current.routesDir || '',
     logDir: current.logDir || '',
     accessLogEnabled: Boolean(current.accessLog?.enabled),
-    accessLogPath: current.accessLog?.path || ''
+    accessLogPath: current.accessLog?.path || '',
+    variables: (current.variables || []).map((item: NginxVariable) => ({ name: item.name || '', value: item.value || '' }))
   }
   settingsOpen.value = true
 }
@@ -193,7 +254,10 @@ const saveSettings = () => run(async () => {
         ...(current.accessLog || {}),
         enabled: settingsDraft.value.accessLogEnabled,
         path: settingsDraft.value.accessLogPath.trim() || current.accessLog?.path || ''
-      }
+      },
+      variables: settingsDraft.value.variables
+        .map((item) => ({ name: item.name.trim(), value: item.value.trim() }))
+        .filter((item) => item.name)
     }
   })
   window.$toast?.success?.('设置已保存')
@@ -274,7 +338,13 @@ onMounted(() => run(load))
           </div>
         </div>
 
-        <div class="border-t border-gray-700 p-3">
+        <div class="space-y-2 border-t border-gray-700 p-3">
+          <button
+            class="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
+            @click="openCreate"
+          >
+            <Plus class="h-3.5 w-3.5" />新增配置
+          </button>
           <button
             class="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
             @click="importOpen = true"
@@ -288,8 +358,14 @@ onMounted(() => run(load))
         <div v-if="selected" class="space-y-4">
           <div class="space-y-3 rounded border border-gray-700 bg-surface-raised p-4">
             <div class="flex items-center gap-2">
-              <span class="min-w-0 truncate font-mono text-sm text-gray-100" :title="selected.path">{{ selected.path }}</span>
+              <span class="min-w-0 flex-1 truncate font-mono text-sm text-gray-100" :title="selected.path">{{ selected.path }}</span>
               <span class="shrink-0 rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-gray-400">{{ selected.kind }}</span>
+              <button
+                class="flex shrink-0 items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:bg-surface-hover"
+                @click="openEdit"
+              >
+                <Pencil class="h-3.5 w-3.5" />编辑
+              </button>
             </div>
             <label class="block text-xs text-gray-400">备注
               <input
@@ -400,6 +476,35 @@ onMounted(() => run(load))
           </label>
 
           <div class="border-t border-gray-700 pt-4">
+            <div class="space-y-2">
+              <div v-for="(variable, index) in settingsDraft.variables" :key="index" class="flex items-center gap-2">
+                <input
+                  v-model="variable.name"
+                  class="w-32 shrink-0 rounded border border-gray-700 bg-surface-sunken px-2 py-1.5 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                  placeholder="变量名"
+                />
+                <input
+                  v-model="variable.value"
+                  class="min-w-0 flex-1 rounded border border-gray-700 bg-surface-sunken px-2 py-1.5 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                  placeholder="值"
+                />
+                <button
+                  class="shrink-0 rounded p-1 text-gray-500 transition hover:bg-surface-hover hover:text-red-400"
+                  title="删除变量"
+                  @click="settingsDraft.variables.splice(index, 1)"
+                ><X class="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+            <button
+              class="mt-2 flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-blue-400 transition hover:border-blue-500 hover:bg-blue-500/10"
+              @click="settingsDraft.variables.push({ name: '', value: '' })"
+            >
+              <Plus class="h-3.5 w-3.5" />新增变量
+            </button>
+            <p v-if="missingVariables.length" class="mt-2 font-mono text-[11px] text-blue-400">未定义：{{ missingVariables.join(', ') }}</p>
+          </div>
+
+          <div class="border-t border-gray-700 pt-4">
             <label class="block">
               <span class="mb-1 block text-xs text-gray-400">路由目录</span>
               <div class="flex gap-2">
@@ -444,5 +549,14 @@ onMounted(() => run(load))
         </div>
       </div>
     </div>
+
+    <RouteEditor
+      v-if="editorOpen && editorRoute"
+      :route="editorRoute"
+      :variables="variables"
+      :missing-variables="missingVariables"
+      @save="submitRoute"
+      @close="closeEditor"
+    />
   </div>
 </template>
