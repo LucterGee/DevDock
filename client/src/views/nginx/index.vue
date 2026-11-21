@@ -6,7 +6,6 @@ import {
   nginxCall,
   type NginxActionResult,
   type NginxConflict,
-  type NginxImportResult,
   type NginxOverview,
   type NginxRoute,
   type NginxStatus,
@@ -25,8 +24,6 @@ const search = ref('')
 const noteDraft = ref('')
 const busy = ref(false)
 
-const importOpen = ref(false)
-const importText = ref('')
 
 const addingTarget = ref(false)
 const newTarget = ref({ label: '', proxyPass: '', referer: '' })
@@ -265,14 +262,6 @@ const exportConfig = () => run(async () => {
   window.$toast?.success?.('已导出 ' + (payload.routes || []).length + ' 条路由')
 })
 
-const submitImport = () => run(async () => {
-  if (!importText.value.trim()) return
-  const result = await nginxCall<NginxImportResult>('nginx:import', { text: importText.value })
-  window.$toast?.success?.(`新增 ${result.added} / 更新 ${result.updated} / 共 ${result.total}`)
-  importOpen.value = false
-  importText.value = ''
-  await load()
-})
 
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
@@ -413,12 +402,6 @@ onMounted(() => run(load))
           >
             <Download class="h-3.5 w-3.5" />导出配置
           </button>
-          <button
-            class="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-gray-600 px-3 py-2 text-xs text-gray-400 transition hover:border-gray-500 hover:bg-surface-hover"
-            @click="importOpen = true"
-          >
-            <FileText class="h-3.5 w-3.5" />从 nginx.conf 导入
-          </button>
           <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onImportFile" />
         </div>
       </aside>
@@ -507,26 +490,6 @@ onMounted(() => run(load))
         </div>
       </section>
     </main>
-
-    <div v-if="importOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="importOpen = false">
-      <div class="w-full max-w-2xl overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
-        <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
-          <h3 class="text-sm font-semibold text-gray-100">从 nginx.conf 导入</h3>
-          <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="importOpen = false"><X class="h-4 w-4" /></button>
-        </div>
-        <div class="space-y-3 p-4">
-          <textarea
-            v-model="importText"
-            class="h-72 w-full rounded border border-gray-700 bg-surface-sunken p-3 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-            placeholder="server { ... }"
-          />
-          <div class="flex justify-end gap-2">
-            <button class="rounded border border-gray-700 px-4 py-2 text-sm text-gray-300 transition hover:bg-surface-hover" @click="importOpen = false">取消</button>
-            <button class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50" :disabled="busy || !importText.trim()" @click="submitImport">导入</button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <div v-if="settingsOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="settingsOpen = false">
       <div class="w-full max-w-lg overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">

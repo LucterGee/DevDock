@@ -7,6 +7,13 @@ const path = require('path');
 const { createNginxRuntime, EXPORT_FORMAT, EXPORT_VERSION } = require('./runtime');
 const { createNginxStore } = require('./routeStore');
 
+const SEED = [
+  { path: "/teacher", note: "信科官网首页", targets: [{ id: "t1", label: "local", proxyPass: "http://127.0.0.1:4567", referer: "" }], headers: { httpVersion: true, host: true, upgrade: true, connection: true }, others: [] },
+  { path: "/api/", note: "", targets: [{ id: "t1", label: "remote", proxyPass: "https://a.example.com/api/", referer: "https://a.example.com/" }], headers: { httpVersion: true, host: false, upgrade: true, connection: true }, others: [] },
+];
+
+const seed = (runtime, routes = SEED) => runtime.importPayload({ format: EXPORT_FORMAT, version: EXPORT_VERSION, routes, variables: [] });
+
 const setup = () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'devdock-exp-'));
   const store = createNginxStore({ statePath: path.join(root, 'state.json'), routesDir: path.join(root, 'routes') });
@@ -46,7 +53,7 @@ const validPayload = () => ({
 
 test('导出带格式标识与版本号', () => {
   const { runtime } = setup();
-  runtime.importFromText(CONF);
+  seed(runtime);
   const payload = runtime.exportPayload();
   assert.equal(payload.format, EXPORT_FORMAT);
   assert.equal(payload.version, EXPORT_VERSION);
@@ -56,7 +63,7 @@ test('导出带格式标识与版本号', () => {
 
 test('导出后再导入可完整还原', () => {
   const { runtime } = setup();
-  runtime.importFromText(CONF);
+  seed(runtime);
   const snapshot = runtime.exportPayload();
   runtime.importPayload({ format: EXPORT_FORMAT, version: EXPORT_VERSION, routes: [], variables: [] });
   assert.equal(runtime.exportPayload().routes.length, 0);
@@ -67,7 +74,7 @@ test('导出后再导入可完整还原', () => {
 
 test('导入覆盖现有路由而不是追加', () => {
   const { runtime } = setup();
-  runtime.importFromText(CONF);
+  seed(runtime);
   runtime.importPayload(validPayload());
   const routes = runtime.exportPayload().routes;
   assert.equal(routes.length, 1);
@@ -102,7 +109,7 @@ test('结构不符的文件被拒绝并给出原因', () => {
 
 test('被拒绝的导入不会改动现有路由', () => {
   const { runtime } = setup();
-  runtime.importFromText(CONF);
+  seed(runtime);
   const before = runtime.exportPayload().routes.length;
   const result = runtime.importPayload({ format: 'bad' });
   assert.equal(result.ok, false);

@@ -1842,13 +1842,6 @@ if ($folder) { $folder.Self.Path }
     return result;
   }));
 
-  socket.on('nginx:import', ({ text, confPath }, callback) => nginxGuard(callback, () => {
-    const content = typeof text === 'string' ? text : fs.readFileSync(confPath, 'utf-8');
-    const result = nginxRuntime.importFromText(content);
-    nginxRuntime.apply();
-    return result;
-  }));
-
   socket.on('nginx:route:save', ({ route }, callback) => nginxGuard(callback, () => {
     const saved = nginxRuntime.upsertRoute(route);
     nginxRuntime.apply();

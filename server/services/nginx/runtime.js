@@ -105,32 +105,6 @@ const createNginxRuntime = (options = {}) => {
     return route;
   };
 
-  // 导入：按 path 合并，已存在的路由保留其目标/开关，只补充新路径
-  const importFromText = (text) => {
-    const { locations } = parseNginxConfig(text);
-    const current = state();
-    const routes = Array.isArray(current.routes) ? current.routes : [];
-    const byPath = new Map(routes.map((item) => [item.path, item]));
-
-    let added = 0;
-    let updated = 0;
-    for (const location of locations) {
-      const incoming = locationToRoute(location);
-      const existing = byPath.get(incoming.path);
-      if (existing) {
-        if (incoming.note && incoming.note !== existing.note) existing.note = incoming.note;
-        updated += 1;
-        continue;
-      }
-      routes.push(incoming);
-      byPath.set(incoming.path, incoming);
-      added += 1;
-    }
-
-    save({ ...current, routes });
-    return { added, updated, total: locations.length };
-  };
-
   // 导出：固定格式标识与版本，结构不符的文件在导入时会被拒绝
   const exportPayload = () => {
     const current = state();
@@ -238,7 +212,6 @@ const createNginxRuntime = (options = {}) => {
     store,
     controller,
     overview,
-    importFromText,
     exportPayload,
     importPayload,
     validateImportPayload,

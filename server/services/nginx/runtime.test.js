@@ -6,6 +6,14 @@ const path = require('path');
 
 const { createNginxRuntime } = require('./runtime');
 const { createNginxStore } = require('./routeStore');
+const { EXPORT_FORMAT, EXPORT_VERSION } = require('./runtime');
+
+const SEED = [
+  { path: "/teacher", note: "信科官网首页", targets: [{ id: "t1", label: "local", proxyPass: "http://127.0.0.1:4567", referer: "" }], headers: { httpVersion: true, host: true, upgrade: true, connection: true }, others: [] },
+  { path: "/api/", note: "", targets: [{ id: "t1", label: "remote", proxyPass: "https://a.example.com/api/", referer: "https://a.example.com/" }], headers: { httpVersion: true, host: false, upgrade: true, connection: true }, others: [] },
+];
+
+const seed = (runtime, routes = SEED) => runtime.importPayload({ format: EXPORT_FORMAT, version: EXPORT_VERSION, routes, variables: [] });
 
 const FIXTURE = [
   'http {',
@@ -55,7 +63,7 @@ const setup = () => {
 
 test('overview 返回排序后的路由与状态', () => {
   const { runtime } = setup();
-  runtime.importFromText(FIXTURE);
+  seed(runtime);
   const view = runtime.overview();
   assert.equal(view.routes.length, 2);
   assert.deepEqual(view.routes.map((r) => r.path), ['/api/', '/teacher']);
@@ -63,29 +71,11 @@ test('overview 返回排序后的路由与状态', () => {
   assert.deepEqual(view.conflicts, []);
 });
 
-test('导入按 path 合并，重复导入不产生重复路由', () => {
-  const { runtime } = setup();
-  const first = runtime.importFromText(FIXTURE);
-  assert.equal(first.added, 2);
-  assert.equal(first.updated, 0);
 
-  const second = runtime.importFromText(FIXTURE);
-  assert.equal(second.added, 0);
-  assert.equal(second.updated, 2);
-  assert.equal(runtime.overview().routes.length, 2);
-});
-
-test('导入保留被注释掉的候选目标识别结果', () => {
-  const { runtime } = setup();
-  runtime.importFromText(FIXTURE);
-  const route = runtime.overview().routes.find((r) => r.path === '/api/');
-  assert.equal(route.targets.length, 1);
-  assert.equal(route.targets[0].proxyPass, 'https://aiedu.epubedu.com/api/');
-});
 
 test('开关与目标切换写入状态', () => {
   const { runtime } = setup();
-  runtime.importFromText(FIXTURE);
+  seed(runtime);
   const id = runtime.overview().routes[0].id;
 
   runtime.setEnabled(id, false);
@@ -107,7 +97,7 @@ test('开关与目标切换写入状态', () => {
 
 test('apply 写配置并同步路由文件，停用的路由不落盘', () => {
   const { runtime, routesDir, calls } = setup();
-  runtime.importFromText(FIXTURE);
+  seed(runtime);
   const routes = runtime.overview().routes;
   runtime.setEnabled(routes[0].id, false);
 
@@ -120,7 +110,7 @@ test('apply 写配置并同步路由文件，停用的路由不落盘', () => {
 
 test('removeRoute 删除路由', () => {
   const { runtime } = setup();
-  runtime.importFromText(FIXTURE);
+  seed(runtime);
   const id = runtime.overview().routes[0].id;
   runtime.removeRoute(id);
   assert.equal(runtime.overview().routes.length, 1);
@@ -128,7 +118,7 @@ test('removeRoute 删除路由', () => {
 
 test('冲突文件在 overview 中暴露，overwrite 可覆盖', () => {
   const { runtime, routesDir } = setup();
-  runtime.importFromText(FIXTURE);
+  seed(runtime);
   runtime.apply();
   const routes = runtime.overview().routes;
   const file = path.join(routesDir, routes[0].id + '.conf');
