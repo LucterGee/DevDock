@@ -423,10 +423,10 @@ const toggleHide = (p) => {
           class="w-full px-3 py-2 font-mono text-sm text-gray-300 bg-gray-900 border border-gray-600 rounded focus:outline-none focus:border-blue-500 disabled:opacity-50"
           placeholder="输入路径或点击右侧按钮选择..."
         />
-        <button @click="openNativeDialog" :disabled="isScanning" class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition bg-gray-700 border border-gray-600 rounded hover:bg-gray-600 whitespace-nowrap disabled:opacity-50">
+        <button @click="openNativeDialog" :disabled="isScanning" class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition bg-surface border border-gray-600 rounded hover:bg-surface-hover whitespace-nowrap disabled:opacity-50">
           <FolderOpen class="w-4 h-4" /> <span class="hidden sm:inline">选择</span>
         </button>
-        <button @click="manualScan" :disabled="isScanning" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-medium whitespace-nowrap transition shadow-sm flex items-center gap-2 disabled:opacity-50 min-w-[80px] justify-center">
+        <button @click="manualScan" :disabled="isScanning" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-medium whitespace-nowrap transition flex items-center gap-2 disabled:opacity-50 min-w-[80px] justify-center">
           <RefreshCw v-if="!isScanning" class="w-4 h-4" />
           <svg v-else class="w-4 h-4 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           {{ isScanning ? '扫描中' : '扫描' }}
