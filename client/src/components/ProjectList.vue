@@ -5,90 +5,94 @@
       <p>暂无项目</p>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+    <div class="flex flex-col gap-3">
       <div
         v-for="p in projects"
         :key="p.path"
-        class="relative flex flex-col transition bg-gray-800 border border-gray-700 rounded-lg shadow-xl group hover:border-blue-500/30"
+        :ref="(el) => setCardRef(el, p.path)"
+        class="flex flex-col transition bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden hover:border-blue-500/30 scroll-mt-24"
       >
-        <div class="flex items-center justify-between p-3 pl-4 bg-gray-800 border-b border-gray-700 rounded-t-lg">
-          <div class="flex items-center gap-3 overflow-hidden">
-            <div
-              :class="[
-                'w-2.5 h-2.5 rounded-full transition-all duration-300',
-                hasRunningScripts(p) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-600'
-              ]"
-            ></div>
+        <!-- Title 行：点击空白处或右侧箭头切换展开 -->
+        <div
+          class="flex items-center gap-3 px-4 py-3 cursor-pointer select-none transition hover:bg-gray-700/20"
+          @click="togglePanel(p)"
+        >
+          <div
+            :class="[
+              'w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-300',
+              hasRunningScripts(p) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-600'
+            ]"
+          ></div>
 
-            <div class="flex flex-col overflow-hidden">
-              <div class="flex items-center gap-2">
-                <div class="font-mono w-[260px] text-base font-bold text-gray-200 truncate" :title="p.name">
-                  {{ p.name }}
-                </div>
-                <span :class="['text-[10px] px-1.5 py-0.5 rounded border font-mono uppercase', getRunnerBadgeStyle(p.runner)]">
-                  {{ p.runner }}
-                </span>
-                <span
-                  v-if="nvmDetected"
-                  :class="['text-[10px] px-1.5 py-0.5 rounded border font-mono', getNodeVersionBadgeStyle(p.nodeVersionSource)]"
-                  :title="getNodeVersionTooltip(p)"
-                >
-                  {{ getNodeVersionLabel(p) }}
-                </span>
-              </div>
-              
-              <div class="flex items-center min-w-0 gap-1 text-gray-500">
-                <div class="text-[10px] truncate hover:text-gray-300 transition w-[200px]">
-                  {{ p.path.split(/[\\/]/).slice(-2).join('/') }}
-                </div>
-                <button
-                  @click.stop="$emit('open-folder', p.path)"
-                  title="在资源管理器中打开"
-                  class="p-1 text-gray-500 transition rounded hover:bg-gray-700 hover:text-blue-400 shrink-0"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 2H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M2 10h20"></path></svg>
-                </button>
-                <button
-                  @click.stop="$emit('open-terminal', p.path)"
-                  title="在终端中打开"
-                  class="p-1 text-gray-500 transition rounded hover:bg-gray-700 hover:text-green-400 shrink-0"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                </button>
-              </div>
+          <div class="flex flex-col min-w-0 flex-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-mono text-base font-bold text-gray-200 truncate" :title="p.name">{{ p.name }}</span>
+              <span
+                v-if="isHidden(p.path)"
+                class="shrink-0 text-[10px] bg-yellow-900/30 text-yellow-500 px-1.5 py-0.5 rounded border border-yellow-800/50"
+              >HIDDEN</span>
             </div>
+            <div class="text-[10px] text-gray-500 truncate" :title="p.path">
+              {{ p.path.split(/[\\/]/).slice(-2).join('/') }}
+            </div>
+          </div>
 
-            <span v-if="isHidden(p.path)" class="text-[10px] bg-yellow-900/30 text-yellow-500 px-1.5 py-0.5 rounded border border-yellow-800/50">
-              HIDDEN
+          <div class="flex items-center gap-2 shrink-0">
+            <span :class="['text-[10px] px-1.5 py-0.5 rounded border font-mono uppercase', getRunnerBadgeStyle(p.runner)]">
+              {{ p.runner }}
+            </span>
+            <span
+              v-if="nvmDetected"
+              :class="['text-[10px] px-1.5 py-0.5 rounded border font-mono', getNodeVersionBadgeStyle(p.nodeVersionSource)]"
+              :title="getNodeVersionTooltip(p)"
+            >
+              {{ getNodeVersionLabel(p) }}
             </span>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1 shrink-0">
             <button
-              @click.stop="emit('toggle-mini-program', p)"
-              :title="p.isMiniProgram ? '取消小程序标签' : '标记为小程序'"
-              :class="[
-                'px-2 py-1 text-[10px] rounded border transition truncate',
-                p.isMiniProgram
-                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-                  : 'bg-gray-700/60 text-gray-400 border-gray-600 hover:text-emerald-300 hover:border-emerald-500/40'
-              ]"
+              @click.stop="$emit('open-folder', p.path)"
+              title="在资源管理器中打开"
+              class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-blue-400"
             >
-              {{ p.isMiniProgram ? '小程序' : '+小程序' }}
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 2H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M2 10h20"></path></svg>
             </button>
-
             <button
-              @click="$emit('toggle-hide', p)"
-              :title="!isHidden(p.path) ? '隐藏' : '退出隐藏'"
-              class="text-gray-500 hover:text-red-400 p-1.5 rounded transition hover:bg-gray-700"
+              @click.stop="$emit('open-terminal', p.path)"
+              title="在终端中打开"
+              class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-green-400"
             >
-              <svg v-if="!isHidden(p.path)"xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            </button>
+            <button
+              @click.stop="$emit('toggle-hide', p)"
+              :title="!isHidden(p.path) ? '隐藏' : '退出隐藏'"
+              class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-red-400"
+            >
+              <svg v-if="!isHidden(p.path)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
               </svg>
               <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
             </button>
+            <button
+              @click.stop="togglePanel(p)"
+              :title="isExpanded(p) ? '收起' : '展开'"
+              class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-white"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                :class="['transition-transform duration-200', isExpanded(p) ? 'rotate-180' : '']"
+              ><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
           </div>
         </div>
+
+        <!-- 面板：同一时间只展开一个；首次展开后常驻，仅用 v-show 切换，
+             否则 TerminalView 被卸载会丢失 AI 诊断等内部状态 -->
+        <template v-if="hasBeenOpened(p)">
+        <div v-show="isExpanded(p)" class="flex flex-col border-t border-gray-700/60">
 
         <div class="px-4 py-3 bg-[#111827] flex flex-wrap gap-2 items-center border-b border-gray-700/50 min-h-[50px]">
           <button
@@ -109,13 +113,18 @@
             <span v-else>{{ key }}</span>
           </button>
 
-          <div class="flex-1"></div>
+          <span v-if="!Object.keys(p.scripts || {}).length" class="text-xs text-gray-500">
+            该项目 package.json 未定义脚本
+          </span>
+          </div>
 
+          <!-- 第二行：Node 版本 / 微信工具 / Git / KILL -->
+          <div class="px-4 py-2.5 bg-[#0f172a] flex flex-wrap gap-2 items-center border-b border-gray-700/50">
           <select
             v-if="nvmDetected && installedNodeVersions.length > 0"
             :value="p.nodeVersionOverride || (p.nodeVersionSource === 'auto' ? 'auto' : 'system')"
             @change="emit('node-version-change', p, $event.target.value)"
-            class="px-2 py-1 text-[10px] font-mono bg-gray-800 border border-gray-600 rounded text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer max-w-[120px]"
+            class="px-2 py-1 text-[10px] font-mono bg-gray-800 border border-gray-600 rounded text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer max-w-[140px]"
             title="选择 Node 版本"
           >
             <option value="auto">
@@ -128,7 +137,6 @@
           </select>
 
           <button
-            v-if="p.isMiniProgram"
             @click="emit('open-wechat-devtools', p)"
             :disabled="!canOpenWechatDevtools(p)"
             :title="getWechatDevtoolsTooltip(p)"
@@ -156,49 +164,6 @@
           </button>
         </div>
 
-        <div class="px-4 py-3 border-b border-gray-700/50 bg-[#0f172a]">
-          <div class="flex items-center justify-between gap-2 mb-2">
-            <span class="text-[11px] font-bold tracking-wide text-cyan-300 uppercase">Custom Command</span>
-            <span
-              class="text-[10px] px-2 py-0.5 rounded border font-mono"
-              :class="p.commandRunning ? 'text-amber-300 border-amber-500/40 bg-amber-500/10' : 'text-gray-500 border-gray-700 bg-gray-900/40'"
-            >
-              {{ p.commandRunning ? 'RUNNING' : 'IDLE' }}
-            </span>
-          </div>
-
-          <div class="flex gap-2">
-            <input
-              :value="getCommandInput(p.path)"
-              @input="setCommandInput(p.path, $event.target.value)"
-              @keydown.enter.prevent="handleRunCommand(p)"
-              type="text"
-              class="flex-1 px-3 py-2 text-xs text-gray-200 bg-gray-900 border border-gray-700 rounded focus:outline-none focus:border-cyan-500 font-mono"
-              placeholder="例如：npm i / pnpm add axios / node -v"
-            >
-            <button
-              @click="handleRunCommand(p)"
-              :disabled="p.commandRunning || !getCommandInput(p.path).trim()"
-              class="px-3 py-2 text-xs font-bold text-white transition rounded"
-              :class="p.commandRunning || !getCommandInput(p.path).trim() ? 'bg-gray-700 cursor-not-allowed opacity-60' : 'bg-cyan-600 hover:bg-cyan-500'"
-            >
-              执行
-            </button>
-            <button
-              @click="emit('stop-command', p)"
-              :disabled="!p.commandRunning"
-              class="px-3 py-2 text-xs font-bold text-white transition rounded"
-              :class="p.commandRunning ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-700 cursor-not-allowed opacity-60'"
-            >
-              停止
-            </button>
-          </div>
-
-          <div v-if="p.commandRunning && p.runningCommand" class="mt-2 text-[11px] font-mono text-amber-300 truncate">
-            {{ p.runningCommand }}
-          </div>
-        </div>
-
         <div v-if="stats[p.path]" class="px-4 py-2 border-b bg-gray-900/80 border-gray-700/50">
           <div class="flex items-center mb-1 text-xs whitespace-nowrap">
             <span class="w-8 text-gray-400">CPU</span>
@@ -222,7 +187,46 @@
           </div>
         </div>
 
-        <TerminalView :id="p.name" :logs="logs[p.name] || []" :project-path="p.path" @open-file="(uri) => $emit('open-file', uri)" />
+        <TerminalView :id="p.name" :logs="logs[p.name] || []" :project-path="p.path" @open-file="(uri) => $emit('open-file', uri)">
+        <!-- 命令行：Enter 执行；运行中禁止输入，可点停止。放在 slot 内以便被 AI 报告覆盖 -->
+        <div class="px-4 py-3 border-t border-gray-700/50 bg-[#0f172a]">
+          <div class="flex gap-2">
+            <input
+              :value="p.commandRunning ? p.runningCommand : getCommandInput(p.path)"
+              :disabled="p.commandRunning"
+              @input="handleCommandInput(p.path, $event.target.value)"
+              @keydown.enter.prevent="handleRunCommand(p)"
+              @keydown.up.prevent="navigateHistory(p, -1)"
+              @keydown.down.prevent="navigateHistory(p, 1)"
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              :class="[
+                'flex-1 px-3 py-2 text-xs font-mono rounded border focus:outline-none transition',
+                p.commandRunning
+                  ? 'text-amber-300 bg-gray-900/60 border-amber-600/40 cursor-not-allowed'
+                  : 'text-gray-200 bg-gray-900 border-gray-700 focus:border-cyan-500'
+              ]"
+            >
+            <button
+              @click="handleRunCommand(p)"
+              :disabled="p.commandRunning || !getCommandInput(p.path).trim()"
+              class="px-3 py-2 text-xs font-bold text-white transition rounded"
+              :class="p.commandRunning || !getCommandInput(p.path).trim() ? 'bg-gray-700 cursor-not-allowed opacity-60' : 'bg-cyan-600 hover:bg-cyan-500'"
+            >
+              执行
+            </button>
+            <button
+              @click="emit('stop-command', p)"
+              :disabled="!p.commandRunning"
+              class="px-3 py-2 text-xs font-bold text-white transition rounded"
+              :class="p.commandRunning ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-700 cursor-not-allowed opacity-60'"
+            >
+              停止
+            </button>
+          </div>
+        </div>
+        </TerminalView>
         <div
           v-if="hasRunningScripts(p) && isTunnelActiveProject(p) && isCloudflaredRunning() && getTunnelPublicUrl()"
           class="px-4 py-2 border-b border-cyan-700/40 bg-cyan-900/15"
@@ -240,6 +244,8 @@
             </a>
           </div>
         </div>
+        </div>
+        </template>
       </div>
     </div>
 
@@ -294,7 +300,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import TerminalView from './TerminalView.vue'
 import { callKuyepClaude } from '../utils/ai' // 引入通用的 AI 工具
 import { socket } from "../utils/socket";
@@ -327,12 +333,48 @@ const emit = defineEmits([
   'open-terminal',
   'open-file',
   'toggle-hide',
-  'toggle-mini-program',
   'open-wechat-devtools',
   'node-version-change'
 ])
 
 const commandInputs = ref({})
+
+// 折叠面板：同一时间最多展开一个项目
+const expandedPath = ref('')
+// 曾经展开过的项目：面板一旦挂载就常驻，仅用 v-show 切换，
+// 避免 TerminalView 被销毁导致 AI 诊断等内部状态丢失
+const openedPaths = ref(new Set())
+
+const isExpanded = (p) => expandedPath.value === p.path
+
+const hasBeenOpened = (p) => openedPaths.value.has(p.path)
+
+// 卡片元素引用，用于展开后滚动定位
+const cardRefs = new Map()
+
+const setCardRef = (el, projectPath) => {
+  if (el) cardRefs.set(projectPath, el)
+  else cardRefs.delete(projectPath)
+}
+
+const togglePanel = async (p) => {
+  const next = isExpanded(p) ? '' : p.path
+  if (next) openedPaths.value.add(p.path)
+  expandedPath.value = next
+
+  // 仅展开时定位；收起不动，避免视线被拽走
+  if (!next) return
+
+  // 等 DOM 更新（同时可能有上一个面板收起导致高度变化）
+  await nextTick()
+
+  const el = cardRefs.get(p.path)
+  if (!el) return
+
+  // nearest：卡片已完整可见时不会产生滚动，避免抖动
+  const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+  el.scrollIntoView({ block: 'nearest', behavior: prefersReduced ? 'auto' : 'smooth' })
+}
 
 // 脚本按钮点击（带诊断日志）
 const handleScriptClick = (p, key) => {
@@ -348,12 +390,53 @@ const setCommandInput = (projectPath, value) => {
   commandInputs.value[projectPath] = String(value || '')
 }
 
+// 命令行历史：内存态，按项目路径隔离，只保留最近 50 条
+const HISTORY_LIMIT = 50
+const commandHistory = ref({})
+const historyIndex = ref({})
+
+const pushHistory = (projectPath, command) => {
+  const list = commandHistory.value[projectPath] || []
+  if (list[list.length - 1] !== command) list.push(command)
+  commandHistory.value[projectPath] = list.slice(-HISTORY_LIMIT)
+  historyIndex.value[projectPath] = -1
+}
+
+const handleCommandInput = (projectPath, value) => {
+  setCommandInput(projectPath, value)
+  historyIndex.value[projectPath] = -1
+}
+
+// ↑ 取上一条历史，↓ 取下一条；越过最新一条回到空输入
+const navigateHistory = (project, direction) => {
+  const projectPath = project.path
+  const list = commandHistory.value[projectPath] || []
+  if (!list.length) return
+
+  const current = historyIndex.value[projectPath] ?? -1
+  let next
+
+  if (current === -1) {
+    next = direction < 0 ? list.length - 1 : -1
+  } else {
+    next = current + direction
+    if (next > list.length - 1) {
+      next = -1 // 越过最新一条 → 回到空输入
+    } else if (next < 0) {
+      next = 0 // 越过最早一条 → 停在最早
+    }
+  }
+
+  historyIndex.value[projectPath] = next
+  setCommandInput(projectPath, next === -1 ? '' : list[next])
+}
+
 const handleRunCommand = (project) => {
   if (project.commandRunning) return
-  emit('run-command', {
-    project,
-    command: getCommandInput(project.path)
-  })
+  const command = getCommandInput(project.path).trim()
+  if (!command) return
+  pushHistory(project.path, command)
+  emit('run-command', { project, command })
 }
 
 // Git 状态
@@ -494,9 +577,9 @@ const canOpenWechatDevtools = (project) => {
 }
 
 const getWechatDevtoolsTooltip = (project) => {
-  if (!project.isMiniProgram) return '该项目尚未标记为小程序'
-  if (!props.wechatDevtoolsConfigured) return '请先在设置中配置当前平台的微信开发者工具路径'
-  return '直接启动微信开发者工具'
+  if (!project.isMiniProgram) return '未检测到 project.config.json，不视为小程序项目'
+  if (!props.wechatDevtoolsConfigured) return '请先在 设置 → 开发工具 中配置微信开发者工具路径'
+  return '启动微信开发者工具'
 }
 
 const normalizePath = (value = '') =>

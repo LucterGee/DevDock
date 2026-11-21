@@ -10,7 +10,6 @@ const { tunnelConfig, wechatDevtoolsConfig } = useAiConfig();
 const WORKSPACE_CONFIG_KEY = 'workspace_root_path';
 const HIDDEN_PROJECTS_CONFIG_KEY = 'hidden_projects_by_workspace';
 const LEGACY_HIDDEN_PROJECTS_KEY = 'hidden-projects';
-const PROJECT_TAGS_CONFIG_KEY = 'project_tags_by_path';
 
 // --- 状态定义 ---
 const currentPath = ref('')
@@ -350,26 +349,6 @@ const handleStop = (p) => {
   if (stats.value[p.path]) delete stats.value[p.path]
 }
 
-const handleMiniProgramToggle = (p) => {
-  socket.emit('config:load', PROJECT_TAGS_CONFIG_KEY, (savedTags) => {
-    const nextTags = { ...(savedTags || {}) }
-    const nextValue = !p.isMiniProgram
-
-    if (nextValue) {
-      nextTags[p.path] = { ...(nextTags[p.path] || {}), isMiniProgram: true }
-    } else {
-      delete nextTags[p.path]
-    }
-
-    socket.emit('config:save', { key: PROJECT_TAGS_CONFIG_KEY, value: nextTags })
-
-    const project = rawProjects.value.find(x => x.path === p.path)
-    if (project) {
-      project.isMiniProgram = nextValue
-    }
-  })
-}
-
 const handleOpenWechatDevtools = (p) => {
   socket.emit('tool:open-wechat-devtools', { projectPath: p.path }, ({ success, error }) => {
     if (success) {
@@ -501,7 +480,6 @@ const toggleHide = (p) => {
         @open-terminal="handleOpenTerminal"
         @open-file="(uri) => socket.emit('open-file', uri)"
         @toggle-hide="toggleHide"
-        @toggle-mini-program="handleMiniProgramToggle"
         @open-wechat-devtools="handleOpenWechatDevtools"
         @node-version-change="handleNodeVersionChange"
       />

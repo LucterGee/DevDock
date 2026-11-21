@@ -508,7 +508,12 @@ const flushLogs = () => {
 
 onMounted(() => { nextTick(() => initTerminal()); });
 watch(() => props.logs, () => flushLogs(), { deep: true });
-const resizeObserver = new ResizeObserver(() => fitAddon?.fit());
+const resizeObserver = new ResizeObserver(() => {
+  // 面板折叠（v-show 隐藏）时容器尺寸为 0，跳过 fit 避免 xterm 计算异常
+  const el = terminalContainer.value;
+  if (!el || !el.offsetWidth || !el.offsetHeight) return;
+  fitAddon?.fit();
+});
 onMounted(() => { if (terminalContainer.value) resizeObserver.observe(terminalContainer.value); });
 onBeforeUnmount(() => {
   term?.dispose();
@@ -519,7 +524,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-[300px] bg-[#0f172a] rounded-b-lg p-2 overflow-hidden border-t border-gray-700 relative group">
+  <div class="w-full bg-[#0f172a] rounded-b-lg overflow-hidden border-t border-gray-700 relative group">
 
     <div class="absolute z-10 flex items-center gap-2 pointer-events-none top-2 left-4">
        <span v-if="hasError" class="flex items-center gap-1 text-[10px] font-bold text-red-400 animate-pulse bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm border border-red-500/30">
@@ -551,7 +556,12 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div ref="terminalContainer" class="w-full h-full" style="text-align: left !important;"></div>
+    <div class="p-2 h-[300px]">
+      <div ref="terminalContainer" class="w-full h-full" style="text-align: left !important;"></div>
+    </div>
+
+    <!-- 外部内容槽：命令输入行等，位于终端区下方，会被 AI 报告一并覆盖 -->
+    <slot></slot>
 
     <!-- AI 弹窗 -->
     <div v-if="showAiModal"

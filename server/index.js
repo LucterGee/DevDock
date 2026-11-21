@@ -27,6 +27,7 @@ const {
   PROJECT_TAGS_BY_PATH_KEY,
   WECHAT_DEVTOOLS_CONFIG_KEY,
   isMiniProgramTagged,
+  hasWeChatProjectConfig,
   normalizeProjectTagsByPath,
   normalizeWechatDevtoolsConfig,
   resolveWechatLaunchSpec,
@@ -967,7 +968,9 @@ if ($folder) { $folder.Self.Path }
       const effectiveTunnelPort = hasManualPort ? manualPort : autoPortInfo.port;
       const tunnelPortSource = hasManualPort ? 'manual' : 'auto';
       const commandEntry = commandProcesses.get(p.path);
-      const isMiniProgram = isMiniProgramTagged(projectTagsByPath, p.path);
+      // 自动识别（项目根目录存在 project.config.json）或沿用配置中的手动标记
+      const isMiniProgram =
+        hasWeChatProjectConfig(p.path) || isMiniProgramTagged(projectTagsByPath, p.path);
 
       return {
         ...p,
@@ -1432,7 +1435,7 @@ if ($folder) { $folder.Self.Path }
 
     const projectTagsByPath = readProjectTagsByPath();
     if (!isMiniProgramTagged(projectTagsByPath, projectPath)) {
-      callback?.({ success: false, error: '该项目尚未标记为小程序' });
+      callback?.({ success: false, error: '该项目未检测到 project.config.json，不视为小程序项目' });
       return;
     }
 
