@@ -23,6 +23,22 @@
   color-scheme: dark;
 }
 
+/* 非输入框 / 非终端区域禁止文本选中，避免拖拽时误选界面文字。
+   终端由 xterm 自行管理选区（.xterm 内置 user-select: none + 自定义选区），
+   这里不要覆盖它，否则会破坏其选择与复制。 */
+body {
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'],
+pre,
+code {
+  user-select: text;
+}
+
 /* 浅色主题：反转 gray/slate 明度阶梯
    原深色下 gray-900 是最暗（页面底）、gray-100 是最亮（正文），
    反转后 bg-gray-900 变浅、text-gray-100 变深，工具类语义保持不变。 */
