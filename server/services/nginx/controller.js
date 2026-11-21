@@ -137,6 +137,17 @@ const createNginxController = (options = {}) => {
     }
 
     const target = paths();
+    const running = isProcessAlive(readPid(target.pidPath));
+
+    if ((action === 'reload' || action === 'stop') && !running) {
+      resolve({ ok: false, code: 'NOT_RUNNING', error: 'nginx 未运行，无法执行该操作' });
+      return;
+    }
+    if (action === 'start' && running) {
+      resolve({ ok: false, code: 'ALREADY_RUNNING', error: 'nginx 已在运行' });
+      return;
+    }
+
     if (action !== 'stop') ensureConfig();
     const args = buildArgs({ prefixDir: target.prefixDir, confPath: target.confPath, action });
     execFileImpl(binary, args, { timeout: 15000, env: buildEnv() }, (error, stdout, stderr) => {

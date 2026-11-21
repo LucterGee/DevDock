@@ -28,6 +28,10 @@ const busy = ref(false)
 const addingTarget = ref(false)
 const newTarget = ref({ label: '', proxyPass: '', referer: '' })
 
+const canTest = computed(() => Boolean(status.value?.installed))
+const canStart = computed(() => Boolean(status.value?.installed) && !status.value?.running)
+const canReload = computed(() => Boolean(status.value?.running))
+const canStop = computed(() => Boolean(status.value?.running))
 const runStateLabel = computed(() => {
   if (!status.value) return '读取中'
   if (status.value.running) return '运行中'
@@ -330,16 +334,16 @@ onMounted(() => run(load))
         <span class="text-xs text-gray-400">{{ routes.length }} 条（{{ enabledCount }} 启用）</span>
       </div>
       <div class="flex shrink-0 items-center gap-2">
-        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="runAction('nginx:validate')">
+        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy || !canTest" @click="runAction('nginx:validate')">
           <ShieldCheck class="h-3.5 w-3.5" />校验配置
         </button>
-        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="runAction('nginx:reload')">
+        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy || !canReload" @click="runAction('nginx:reload')">
           <RotateCw class="h-3.5 w-3.5" />重载
         </button>
-        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="runAction('nginx:start')">
+        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy || !canStart" @click="runAction('nginx:start')">
           <Play class="h-3.5 w-3.5" />启动
         </button>
-        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="runAction('nginx:stop')">
+        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy || !canStop" @click="runAction('nginx:stop')">
           <Square class="h-3.5 w-3.5" />停止
         </button>
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="openSettings">
