@@ -1,6 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const net = require('net');
 const { execFile } = require('child_process');
 
 const { buildMainConfig, resolvePort } = require('./configBuilder');
@@ -45,6 +46,22 @@ const isProcessAlive = (pid) => {
   }
 };
 
+// 探测 127.0.0.1 上是否已有监听。nginx 绑的是 *:port，若本机另有进程
+// 绑定了 127.0.0.1:port，系统会把本机请求投给更具体的那个绑定，
+// 表现为连接成功但收不到响应，因此启动前必须单独检查
+const isPortInUse = (port, host = '127.0.0.1', timeout = 400) => new Promise((resolve) => {
+  if (!port) { resolve(false); return; }
+  const socket = net.connect({ port, host });
+  const finish = (result) => {
+    socket.destroy();
+    resolve(result);
+  };
+  socket.setTimeout(timeout);
+  socket.once('connect', () => finish(true));
+  socket.once('timeout', () => finish(false));
+  socket.once('error', () => finish(false));
+});
+
 const createNginxController = (options = {}) => {
   const platform = options.platform || process.platform;
   const repoRoot = options.repoRoot || path.join(__dirname, '..', '..', '..');
@@ -68,7 +85,7 @@ const createNginxController = (options = {}) => {
   const paths = () => {
     const current = state();
     const nginx = current.nginx || {};
-    const prefixDir = nginx.prefixDir || path.join(os.homedir(), '.devdock', NGINX_DIR_NAME);
+    const prefixDir = options.prefixDir || nginx.prefixDir || path.join(os.homedir(), '.devdock', NGINX_DIR_NAME);
     return {
       prefixDir,
       confPath: path.join(prefixDir, 'nginx.conf'),
@@ -125,43 +142,54 @@ const createNginxController = (options = {}) => {
     return env;
   };
 
-  const run = (action) => new Promise((resolve) => {
+  const run = async (action) => {
     const binary = binaryPath();
     if (!fs.existsSync(binary)) {
-      resolve({
+      return {
         ok: false,
         code: 'BINARY_MISSING',
         error: '未找到内置 nginx 二进制：' + binary + '\n开发模式下请先运行 npm run nginx:fetch 准备二进制。',
-      });
-      return;
+      };
     }
 
     const target = paths();
     const running = isProcessAlive(readPid(target.pidPath));
 
     if ((action === 'reload' || action === 'stop') && !running) {
-      resolve({ ok: false, code: 'NOT_RUNNING', error: 'nginx 未运行，无法执行该操作' });
-      return;
+      return { ok: false, code: 'NOT_RUNNING', error: 'nginx 未运行，无法执行该操作' };
     }
     if (action === 'start' && running) {
-      resolve({ ok: false, code: 'ALREADY_RUNNING', error: 'nginx 已在运行' });
-      return;
+      return { ok: false, code: 'ALREADY_RUNNING', error: 'nginx 已在运行' };
+    }
+
+    if (action === 'start') {
+      const port = resolvePort(state().nginx);
+      if (await isPortInUse(port)) {
+        return {
+          ok: false,
+          code: 'PORT_IN_USE',
+          error: '端口 ' + port + ' 已被其他程序占用（127.0.0.1），本机请求不会到达 nginx，请更换端口后重试',
+        };
+      }
     }
 
     if (action !== 'stop') ensureConfig();
     const args = buildArgs({ prefixDir: target.prefixDir, confPath: target.confPath, action });
-    execFileImpl(binary, args, { timeout: 15000, env: buildEnv() }, (error, stdout, stderr) => {
-      resolve({
-        ok: !error,
-        code: error ? error.code || 'EXEC_FAILED' : 'OK',
-        stdout: String(stdout || ''),
-        stderr: String(stderr || ''),
-        error: error ? String(stderr || error.message || '') : '',
-        args,
-        binary,
+
+    return new Promise((resolve) => {
+      execFileImpl(binary, args, { timeout: 15000, env: buildEnv() }, (error, stdout, stderr) => {
+        resolve({
+          ok: !error,
+          code: error ? error.code || 'EXEC_FAILED' : 'OK',
+          stdout: String(stdout || ''),
+          stderr: String(stderr || ''),
+          error: error ? String(stderr || error.message || '') : '',
+          args,
+          binary,
+        });
       });
     });
-  });
+  };
 
   const status = () => {
     const target = paths();

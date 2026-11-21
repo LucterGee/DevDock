@@ -45,6 +45,7 @@ test('未准备二进制时 status 报告 installed=false 且动作返回 BINARY
   const store = createNginxStore({ statePath: path.join(root, 'state.json'), routesDir: path.join(root, 'routes') });
   const controller = createNginxController({
     store,
+    prefixDir: path.join(root, 'nginx'),
     repoRoot: path.join(root, 'repo'),
     isPackaged: false,
     platform: 'darwin',
