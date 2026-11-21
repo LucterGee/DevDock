@@ -27,18 +27,34 @@ jobs:
         with:
           node-version: 22
 
-      # 3. 构建前端
-      - name: Build Frontend
+      # 3. 安装前端依赖
+      - name: Install Frontend Dependencies
         run: |
           cd client
           npm install
+
+      # 4. 类型检查（失败即中断，避免带类型错误发版）
+      - name: Typecheck Frontend
+        run: |
+          cd client
+          npx vue-tsc --noEmit
+
+      # 5. 构建前端
+      - name: Build Frontend
+        run: |
+          cd client
           npm run build
-      
-      # 4. 安装根目录依赖
+
+      # 6. 安装根目录依赖
       - name: Install Root Dependencies
         run: npm install
 
-      # 5. 执行打包 (关键修复：跳过 Mac 签名)
+      # 7. 后端单元测试（用 bash 以保证通配符在 Windows runner 上也能展开）
+      - name: Run Server Tests
+        shell: bash
+        run: node --test server/utils/*.test.js
+
+      # 8. 执行打包 (关键修复：跳过 Mac 签名)
       - name: Build Electron App
         run: npm run dist
         env:
@@ -47,7 +63,7 @@ jobs:
           # 👇👇👇 核心修复：告诉 Mac 不要尝试寻找证书，制作免签名包
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      # 6. 上传产物 (升级到 v4)
+      # 9. 上传产物 (升级到 v4)
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:

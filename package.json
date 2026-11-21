@@ -3,7 +3,7 @@
   "version": "2.0.1",
   "description": "",
   "main": "main.js",
-  "author": "kuyep",
+  "author": "LucterGee",
   "repository": {
     "type": "git",
     "url": "https://github.com/LucterGee/DevDock.git"
@@ -60,7 +60,7 @@
     "asar": true
   },
   "keywords": [],
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "pnpm": {
     "onlyBuiltDependencies": [
