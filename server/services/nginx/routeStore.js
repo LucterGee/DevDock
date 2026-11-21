@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { generateLocationBlock } = require('./generator');
+const { resolveRoute } = require('./variables');
 
 const HEADER_MARK = '# devdock:generated';
 const HEADER_END = '# devdock:header-end';
@@ -28,6 +29,7 @@ const createDefaultState = () => ({
     errorLog: { enabled: true, path: path.join(DEFAULT_LOG_DIR, 'error.log') },
     backupLimit: 10,
     onConflict: 'ask',
+    variables: [],
   },
   routes: [],
 });
@@ -49,8 +51,8 @@ const writeFileAtomic = (filePath, content) => {
 
 const routeFileName = (route) => String(route.id || 'route').replace(/[^a-zA-Z0-9._-]+/g, '-') + '.conf';
 
-const buildFileContent = (route) => {
-  const body = generateLocationBlock(route);
+const buildFileContent = (route, variables) => {
+  const body = generateLocationBlock(variables ? resolveRoute(route, variables) : route);
   const hash = sha256(body);
   // 正文可能以注释开头（路由备注），因此文件头必须有显式结束标记，
   // 不能靠「以 # 开头」来切分
@@ -161,9 +163,9 @@ const createNginxStore = (options = {}) => {
     return { managed, edited, untracked };
   };
 
-  const writeRoute = (route) => {
+  const writeRoute = (route, variables) => {
     const filePath = path.join(routesDir, routeFileName(route));
-    writeFileAtomic(filePath, buildFileContent(route));
+    writeFileAtomic(filePath, buildFileContent(route, variables));
     return filePath;
   };
 
@@ -183,6 +185,7 @@ const createNginxStore = (options = {}) => {
   // - 未托管文件永远不动
   const sync = (state, options2 = {}) => {
     const routes = Array.isArray(state.routes) ? state.routes : [];
+    const variables = (state.nginx && state.nginx.variables) || [];
     const force = new Set(options2.force || []);
     const before = scan();
     const result = { written: [], skipped: [], removed: [], untracked: before.untracked };
@@ -197,7 +200,7 @@ const createNginxStore = (options = {}) => {
         result.skipped.push({ id: route.id, reason: 'edited' });
         continue;
       }
-      result.written.push(writeRoute(route));
+      result.written.push(writeRoute(route, variables));
     }
 
     for (const file of before.managed) {

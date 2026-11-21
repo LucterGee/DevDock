@@ -62,14 +62,24 @@ const fetchMac = () => {
   const libDir = path.join(outDir, 'lib');
   fs.mkdirSync(libDir, { recursive: true });
 
+  // 注意：brew --prefix nginx 在「未安装」时同样会返回路径且退出码为 0，
+  // 因此必须校验二进制本身是否存在，不能只看 brew 的返回
   let prefix = '';
   try {
     prefix = execFileSync('brew', ['--prefix', 'nginx'], { encoding: 'utf8' }).trim();
   } catch (error) {
-    throw new Error('未找到 Homebrew nginx。请先执行：brew install nginx');
+    prefix = '';
   }
 
-  const binary = path.join(prefix, 'bin', 'nginx');
+  const binary = prefix ? path.join(prefix, 'bin', 'nginx') : '';
+  if (!binary || !fs.existsSync(binary)) {
+    throw new Error(
+      '本机没有可用的 Homebrew nginx（' + (binary || 'brew 未安装') + '）。\n' +
+      '请先执行：brew install nginx\n' +
+      '然后重新运行：npm run nginx:fetch'
+    );
+  }
+
   fs.copyFileSync(binary, path.join(outDir, 'nginx'));
   fs.chmodSync(path.join(outDir, 'nginx'), 0o755);
   log('复制二进制 ' + binary);

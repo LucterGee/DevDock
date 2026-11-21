@@ -2,6 +2,7 @@ const { parseNginxConfig } = require('./parser');
 const { locationToRoute } = require('./generator');
 const { createNginxStore } = require('./routeStore');
 const { createNginxController } = require('./controller');
+const { findMissingVariables } = require('./variables');
 
 const sortRoutes = (routes) => [...routes].sort((a, b) => String(a.path).localeCompare(String(b.path)));
 
@@ -16,12 +17,15 @@ const createNginxRuntime = (options = {}) => {
     const current = state();
     const status = controller.status();
     const scan = store.scan();
+    const variables = (current.nginx && current.nginx.variables) || [];
     return {
       state: current,
       status,
       routes: sortRoutes(current.routes || []),
       conflicts: scan.edited.map((item) => ({ id: item.id, path: item.path })),
       untracked: scan.untracked,
+      variables,
+      missingVariables: findMissingVariables(current.routes || [], variables),
     };
   };
 

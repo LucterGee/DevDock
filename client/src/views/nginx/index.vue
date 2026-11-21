@@ -27,6 +27,12 @@ const importText = ref('')
 const addingTarget = ref(false)
 const newTarget = ref({ label: '', proxyPass: '', referer: '' })
 
+const runStateLabel = computed(() => {
+  if (!status.value) return '读取中'
+  if (status.value.running) return '运行中'
+  return status.value.installed ? '未启动' : 'nginx 未就绪'
+})
+
 const selected = computed(() => routes.value.find((route) => route.id === selectedId.value) || null)
 const enabledCount = computed(() => routes.value.filter((route) => route.enabled).length)
 const conflict = computed(() => conflicts.value.find((item) => item.id === selectedId.value) || null)
@@ -208,10 +214,10 @@ onMounted(() => run(load))
       <div class="flex min-w-0 items-center gap-3">
         <span
           class="h-2 w-2 shrink-0 rounded-full"
-          :class="status?.running ? 'bg-green-500' : 'bg-gray-600'"
-          :title="status?.running ? '运行中' : '未运行'"
+          :class="status?.running ? 'bg-green-500' : status?.installed ? 'bg-yellow-500' : 'bg-gray-600'"
         />
-        <span class="font-mono text-xs text-gray-400">:{{ status?.port ?? '—' }}</span>
+        <span class="text-xs" :class="status?.running ? 'text-green-400' : 'text-gray-400'">{{ runStateLabel }}</span>
+        <span class="text-xs text-gray-400">端口 {{ status?.port ?? '—' }}</span>
         <span class="text-xs text-gray-400">{{ routes.length }} 条（{{ enabledCount }} 启用）</span>
       </div>
       <div class="flex shrink-0 items-center gap-2">
