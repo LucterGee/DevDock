@@ -508,10 +508,6 @@
                   <div class="text-sm font-medium" :class="themeMode === option.value ? 'text-indigo-300' : 'text-gray-200'">{{ option.label }}</div>
                 </button>
               </div>
-
-              <div class="p-3 mt-5 text-xs text-gray-400 border border-gray-700 rounded bg-surface-raised">
-                当前生效：{{ resolvedThemeLabel }}（{{ themeModeLabel }}）
-              </div>
             </div>
           </template>
 
@@ -705,7 +701,7 @@ const {
   removeConfig
 } = useAiConfig();
 
-const { themeMode, resolvedTheme } = useTheme();
+const { themeMode } = useTheme();
 
 const currentView = ref('model'); // 'model' | 'scene' | 'tunnel' | 'tool' | 'appearance' | 'reminder' | 'app'
 const currentEditId = ref(null);
@@ -806,13 +802,6 @@ const themeOptions = [
 const selectTheme = (value) => {
   themeMode.value = value;
 };
-
-const resolvedThemeLabel = computed(() => (resolvedTheme.value === 'dark' ? '深色' : '浅色'));
-
-const themeModeLabel = computed(() => {
-  if (themeMode.value === 'auto') return '跟随系统';
-  return themeMode.value === 'dark' ? '手动指定深色' : '手动指定浅色';
-});
 
 // 点击左侧模型列表项
 const handleSelect = (config) => {
