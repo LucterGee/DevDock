@@ -19,7 +19,7 @@
     "dist": "node scripts/build-electron.js"
   },
   "build": {
-    "appId": "com.terminalManage.app",
+    "appId": "com.luctergee.devdock",
     "productName": "DevDock",
     "directories": {
       "output": "dist_electron"

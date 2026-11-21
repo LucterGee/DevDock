@@ -11,7 +11,7 @@ const shouldHideMenu = !process.argv.includes('--show-menu');
 fixPath();
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.terminalManage.app');
+  app.setAppUserModelId('com.luctergee.devdock');
 }
 
 // 引入后端
