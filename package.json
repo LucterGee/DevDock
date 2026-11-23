@@ -68,7 +68,8 @@
       "package.json",
       "!server/node_modules"
     ],
-    "asar": true
+    "asar": true,
+    "afterSign": "scripts/after-sign.js"
   },
   "keywords": [],
   "license": "MIT",
