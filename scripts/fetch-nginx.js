@@ -46,8 +46,19 @@ const fetchWindows = async () => {
   await download(url, zipPath);
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nginx-win-'));
-  // Windows 与 macOS 自带的 bsdtar 都能解 zip，避免依赖 unzip
-  execFileSync('tar', ['-xf', zipPath, '-C', tmpDir], { stdio: 'inherit' });
+  // Windows 上 PATH 里的 tar 可能是 GNU tar，它会把 "C:\..." 的冒号
+  // 当成远程主机语法而报 "Cannot connect to C: resolve failed"，
+  // 因此 Windows 改用 PowerShell 自带的 Expand-Archive
+  if (process.platform === 'win32') {
+    execFileSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command',
+        "Expand-Archive -LiteralPath '" + zipPath + "' -DestinationPath '" + tmpDir + "' -Force"],
+      { stdio: 'inherit' }
+    );
+  } else {
+    execFileSync('tar', ['-xf', zipPath, '-C', tmpDir], { stdio: 'inherit' });
+  }
   const extracted = path.join(tmpDir, 'nginx-' + VERSION);
   for (const name of ['nginx.exe', 'conf', 'html', 'logs', 'temp']) {
     const from = path.join(extracted, name);
