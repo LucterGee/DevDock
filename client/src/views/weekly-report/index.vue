@@ -86,6 +86,23 @@ const collect = async () => {
   finally { loading.value = false }
 }
 
+const QUICK_RANGES = [
+  { label: '今天', offset: 0 },
+  { label: '近24小时', offset: 1 },
+  { label: '近3天', offset: 2 },
+  { label: '近7天', offset: 6 },
+  { label: '近15天', offset: 14 },
+  { label: '近30天', offset: 29 },
+]
+
+// 只改日期区间，不触发采集与生成
+const applyQuickRange = (offset: number) => {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - offset)
+  dates.value = { startDate: toDateInput(start), endDate: toDateInput(end) }
+}
+
 // 以上次汇报的结束日期为起点，到今天为止，并立即采集
 const applyLastReportRange = async () => {
   if (!lastReportEndDate.value) return
@@ -173,6 +190,14 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
       >上次汇报至今</button>
       <button class="rounded bg-gray-700 px-4 py-2 text-sm text-gray-100 transition hover:bg-gray-600 disabled:opacity-50" :disabled="loading" @click="collect">{{ loading ? '采集中…' : '刷新活动' }}</button>
       <button class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50" :disabled="generating || !activity.commits.length" @click="generate">{{ generating ? '生成中…' : `生成汇报 (${selectedCount})` }}</button>
+      <div class="ml-auto flex items-end gap-1">
+        <button
+          v-for="range in QUICK_RANGES"
+          :key="range.label"
+          class="rounded border border-gray-600 px-2 py-1.5 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400"
+          @click="applyQuickRange(range.offset)"
+        >{{ range.label }}</button>
+      </div>
     </div>
 
     <main class="grid gap-4 p-4 lg:grid-cols-[320px_1fr]">

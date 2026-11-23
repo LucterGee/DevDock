@@ -40,7 +40,8 @@ const wechatDevtoolsConfig = ref({
   path: ''
 });
 const editorConfig = ref({
-  editorId: 'vscode'
+  preset: 'vscode',
+  customCommand: ''
 });
 
 export type TerminalPlatformConfig = { preset: string; customApp: string };
@@ -118,7 +119,8 @@ const init = () => {
   socket.emit('config:load', STORAGE_KEY_EDITOR, (data: any) => {
     if (data && typeof data === 'object') {
       editorConfig.value = {
-        editorId: typeof data.editorId === 'string' && data.editorId ? data.editorId : 'vscode'
+        preset: typeof data.preset === 'string' && data.preset ? data.preset : (typeof data.editorId === 'string' && data.editorId ? data.editorId : 'vscode'),
+        customCommand: typeof data.customCommand === 'string' ? data.customCommand : ''
       };
     }
   });

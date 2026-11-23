@@ -1441,7 +1441,7 @@ if ($folder) { $folder.Self.Path }
     }
 
     const config = normalizeEditorConfig(readConfigFile()[EDITOR_CONFIG_KEY]);
-    const spec = resolveEditorLaunch(config.editorId, target, process.platform);
+    const spec = resolveEditorLaunch(config, target, process.platform);
     if (!spec) {
       respond({ success: false, error: '无法解析编辑器启动命令' });
       return;
@@ -1449,10 +1449,10 @@ if ($folder) { $folder.Self.Path }
 
     execFile(spec.command, spec.args, { timeout: 15000 }, (error, stdout, stderr) => {
       if (error) {
-        respond({ success: false, error: describeLaunchError(error, stderr, spec) });
+        respond({ success: false, error: describeLaunchError(error, stderr, spec, config) });
         return;
       }
-      respond({ success: true, editorId: config.editorId });
+      respond({ success: true, preset: config.preset });
     });
   });
 

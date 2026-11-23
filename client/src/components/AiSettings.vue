@@ -469,13 +469,21 @@
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
                   <label class="block mb-2 text-sm font-medium text-gray-100">用编辑器打开</label>
                   <select
-                    :value="editorConfig.editorId"
-                    @change="editorConfig.editorId = $event.target.value"
+                    :value="editorConfig.preset"
+                    @change="editorConfig.preset = $event.target.value"
                     class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 focus:outline-none transition"
                   >
                     <option value="vscode">VS Code</option>
                     <option value="system">系统默认</option>
+                    <option value="custom">自定义…</option>
                   </select>
+                  <input
+                    v-if="editorConfig.preset === 'custom'"
+                    v-model="editorConfig.customCommand"
+                    type="text"
+                    :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\\Program Files\\Zed\\zed.exe' : '命令或 .app 路径，例如 zed 或 /Applications/Zed.app'"
+                    class="w-full mt-2 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                  >
                 </div>
 
               </div>
