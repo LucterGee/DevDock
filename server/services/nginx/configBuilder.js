@@ -80,7 +80,12 @@ const buildMainConfig = (state) => {
 
   // 配置了全局配置就以它为准，http 块里除 server 外全部由用户掌控
   const customHttp = typeof nginx.customHttp === 'string' ? nginx.customHttp.trim() : '';
-  const httpBody = customHttp || buildDefaultHttpBody({ ...nginx, prefixDir: prefix, logDir, routesDir });
+  // 用户只需写指令本身，缩进由生成时统一处理
+  const indentBlock = (text) =>
+    text.split('\n').map((line) => (line.trim() ? '  ' + line : '')).join('\n');
+  const httpBody = customHttp
+    ? indentBlock(customHttp)
+    : buildDefaultHttpBody({ ...nginx, prefixDir: prefix, logDir, routesDir });
 
   const lines = [
     '# 由 DevDock 生成，请勿手工修改；',

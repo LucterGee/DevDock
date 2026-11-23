@@ -272,12 +272,35 @@ const settingsDraft = ref({
   routesDir: '',
   logDir: '',
   accessLogEnabled: false,
-  accessLogPath: '',
-  customHttp: ''
+  accessLogPath: ''
 })
 
-// Tab 键插入制表符而不是切换焦点，缩进原样保留
-const insertTab = (event: KeyboardEvent) => {
+// --- 全局配置（http 级）独立编辑层 ---
+const httpConfigOpen = ref(false)
+const httpConfigDraft = ref('')
+const httpConfigRef = ref<HTMLTextAreaElement | null>(null)
+const lineNumberRef = ref<HTMLElement | null>(null)
+
+const lineNumbers = computed(() => {
+  const count = httpConfigDraft.value.split('\n').length
+  return Array.from({ length: Math.max(count, 1) }, (_, index) => index + 1).join('\n')
+})
+
+const openHttpConfig = () => {
+  const current = nginxSettings.value || {}
+  httpConfigDraft.value = current.customHttp || defaultHttpConfig.value
+  httpConfigOpen.value = true
+}
+
+// 行号列跟随文本域滚动
+const syncHttpScroll = () => {
+  if (lineNumberRef.value && httpConfigRef.value) {
+    lineNumberRef.value.scrollTop = httpConfigRef.value.scrollTop
+  }
+}
+
+// Tab 插入制表符而不是切换焦点
+const insertHttpTab = (event: KeyboardEvent) => {
   const el = event.target as HTMLTextAreaElement
   const start = el.selectionStart
   const end = el.selectionEnd
@@ -285,8 +308,16 @@ const insertTab = (event: KeyboardEvent) => {
   el.value = next
   el.selectionStart = start + 1
   el.selectionEnd = start + 1
-  settingsDraft.value.customHttp = next
+  httpConfigDraft.value = next
 }
+
+const saveHttpConfig = () => run(async () => {
+  const current = nginxSettings.value || {}
+  await nginxCall('nginx:settings:save', { nginx: { ...current, customHttp: httpConfigDraft.value } })
+  window.$toast?.success?.('全局配置已保存')
+  httpConfigOpen.value = false
+  await load()
+})
 
 const openSettings = () => {
   ensureHomeDir()
@@ -296,8 +327,7 @@ const openSettings = () => {
     routesDir: toDisplayPath(current.routesDir),
     logDir: toDisplayPath(current.logDir),
     accessLogEnabled: Boolean(current.accessLog?.enabled),
-    accessLogPath: current.accessLog?.path || '',
-    customHttp: current.customHttp || defaultHttpConfig.value
+    accessLogPath: current.accessLog?.path || ''
   }
   settingsOpen.value = true
 }
@@ -314,8 +344,7 @@ const saveSettings = () => run(async () => {
         ...(current.accessLog || {}),
         enabled: settingsDraft.value.accessLogEnabled,
         path: settingsDraft.value.accessLogPath.trim() || current.accessLog?.path || ''
-      },
-      customHttp: settingsDraft.value.customHttp
+      }
     }
   })
   window.$toast?.success?.('设置已保存')
@@ -440,10 +469,24 @@ onMounted(() => run(load))
               <span class="min-w-0 flex-1 truncate font-mono text-sm text-gray-100" :title="selected.path">{{ selected.path }}</span>
               <span class="shrink-0 rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-gray-400">{{ selected.kind }}</span>
               <button
+                class="flex shrink-0 items-center gap-1.5 rounded border border-gray-700 bg-surface-raised px-2 py-1 text-xs text-red-400 transition hover:bg-surface-hover disabled:opacity-50"
+                :disabled="busy"
+                @click="removeRoute"
+              >
+                <Trash2 class="h-3.5 w-3.5" />删除
+              </button>
+              <button
                 class="flex shrink-0 items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-300 transition hover:bg-surface-hover"
                 @click="openEdit"
               >
                 <Pencil class="h-3.5 w-3.5" />编辑
+              </button>
+              <button
+                class="flex shrink-0 items-center gap-1.5 rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
+                :disabled="busy"
+                @click="saveRoute"
+              >
+                <Save class="h-3.5 w-3.5" />保存
               </button>
             </div>
             <label class="block text-xs text-gray-400">备注
@@ -505,14 +548,6 @@ onMounted(() => run(load))
             </button>
           </div>
 
-          <div class="flex items-center justify-between">
-            <button class="flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50" :disabled="busy" @click="saveRoute">
-              <Save class="h-4 w-4" />保存
-            </button>
-            <button class="flex items-center gap-1.5 rounded border border-gray-700 bg-surface-raised px-4 py-2 text-sm text-red-400 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="removeRoute">
-              <Trash2 class="h-4 w-4" />删除路由
-            </button>
-          </div>
         </div>
       </section>
     </main>
@@ -569,24 +604,48 @@ onMounted(() => run(load))
           </div>
 
           <div class="border-t border-gray-700 pt-4">
-            <label class="block">
-              <span class="mb-1 block text-xs text-gray-400">全局配置（http 级）</span>
-              <textarea
-                v-model="settingsDraft.customHttp"
-                rows="12"
-                spellcheck="false"
-                wrap="off"
-                class="w-full resize-y rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-                style="tab-size: 2; white-space: pre;"
-                placeholder="gzip on;"
-                @keydown.tab.prevent="insertTab"
-              ></textarea>
-            </label>
+            <button
+              class="flex w-full items-center justify-center gap-1.5 rounded border border-gray-700 px-3 py-2 text-xs text-gray-300 transition hover:bg-surface-hover"
+              @click="openHttpConfig"
+            >
+              <Braces class="h-3.5 w-3.5" />编辑全局配置
+            </button>
           </div>
 
           <div class="flex justify-end gap-2 border-t border-gray-700 pt-4">
             <button class="rounded border border-gray-700 px-4 py-2 text-sm text-gray-300 transition hover:bg-surface-hover" @click="settingsOpen = false">取消</button>
             <button class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50" :disabled="busy" @click="saveSettings">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="httpConfigOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="httpConfigOpen = false">
+      <div class="flex h-[82vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
+          <h3 class="text-sm font-semibold text-gray-100">全局配置（http 级）</h3>
+          <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="httpConfigOpen = false"><X class="h-4 w-4" /></button>
+        </div>
+        <div class="min-h-0 flex-1 p-4">
+          <div class="flex h-full overflow-hidden rounded border border-gray-700 bg-surface-sunken">
+            <pre ref="lineNumberRef" class="shrink-0 select-none overflow-hidden border-r border-gray-700 px-2 py-2 text-right font-mono text-xs leading-relaxed text-gray-500">{{ lineNumbers }}</pre>
+            <textarea
+              ref="httpConfigRef"
+              v-model="httpConfigDraft"
+              spellcheck="false"
+              wrap="off"
+              class="min-w-0 flex-1 resize-none bg-transparent px-3 py-2 font-mono text-xs leading-relaxed text-gray-100 focus:outline-none"
+              style="tab-size: 2; white-space: pre;"
+              @keydown.tab.prevent="insertHttpTab"
+              @scroll="syncHttpScroll"
+            ></textarea>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2 border-t border-gray-700 p-4">
+          <span class="text-[11px] text-gray-500">缩进由保存时自动处理</span>
+          <div class="flex gap-2">
+            <button class="rounded border border-gray-700 px-4 py-2 text-sm text-gray-300 transition hover:bg-surface-hover" @click="httpConfigOpen = false">取消</button>
+            <button class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50" :disabled="busy" @click="saveHttpConfig">保存</button>
           </div>
         </div>
       </div>

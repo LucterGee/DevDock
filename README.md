@@ -126,7 +126,8 @@ API Key 经 Electron `safeStorage` 加密后写入配置（macOS 走 Keychain，
 - http 块里除 `server` 外的内容都由设置的「全局配置」掌控（gzip、upstream、map、log_format 等），首次打开会预填默认内容
 - 生成配置里的路径相对 nginx 的 prefix 解析（`pid nginx.pid`、`include routes/*.conf`），不写死用户目录
 - 支持校验配置、重载、启动、停止，监听端口可在设置中调整
-- 路由以自有 JSON 格式导入导出，便于备份和迁移
+- 路由分「代理」与「原始块」两种类型，原始块可直接写 location 内容
+- 路由以自有 JSON 格式导入导出，含端口与全局配置，便于备份和迁移
 - 生成的路由文件带固定标记，能识别出手工改动过的文件
 
 ### 🖥️ 外部工具集成

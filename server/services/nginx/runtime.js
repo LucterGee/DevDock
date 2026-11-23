@@ -103,11 +103,17 @@ const createNginxRuntime = (options = {}) => {
   // 导出：固定格式标识与版本，结构不符的文件在导入时会被拒绝
   const exportPayload = () => {
     const current = state();
+    const nginx = (current && current.nginx) || {};
     return {
       format: EXPORT_FORMAT,
       version: EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
-      variables: (current.nginx && current.nginx.variables) || [],
+      // 端口与全局配置一并导出，换机器导入后不用重配
+      settings: {
+        port: nginx.port,
+        customHttp: nginx.customHttp || '',
+      },
+      variables: nginx.variables || [],
       routes: current.routes || [],
     };
   };
@@ -118,6 +124,9 @@ const createNginxRuntime = (options = {}) => {
     if (Number(payload.version) !== EXPORT_VERSION) return '不支持的版本：' + String(payload.version);
     if (!Array.isArray(payload.routes)) return 'routes 字段必须是数组';
     if (payload.variables != null && !Array.isArray(payload.variables)) return 'variables 字段必须是数组';
+    if (payload.settings != null && (typeof payload.settings !== 'object' || Array.isArray(payload.settings))) {
+      return 'settings 字段必须是对象';
+    }
 
     for (const route of payload.routes) {
       if (!route || typeof route !== 'object') return '存在无效的路由条目';
@@ -154,11 +163,20 @@ const createNginxRuntime = (options = {}) => {
       managed: true,
     }));
 
-    save({
-      ...current,
-      nginx: { ...current.nginx, variables: payload.variables || [] },
-      routes,
-    });
+    const incoming = payload.settings && typeof payload.settings === 'object' ? payload.settings : {};
+    const incomingPort = Number(incoming.port);
+    const nextNginx = {
+      ...current.nginx,
+      variables: payload.variables || [],
+    };
+    if (Number.isInteger(incomingPort) && incomingPort > 0 && incomingPort < 65536) {
+      nextNginx.port = incomingPort;
+    }
+    if (typeof incoming.customHttp === 'string') {
+      nextNginx.customHttp = incoming.customHttp;
+    }
+
+    save({ ...current, nginx: nextNginx, routes });
 
     return { ok: true, imported: routes.length, variables: (payload.variables || []).length };
   };
