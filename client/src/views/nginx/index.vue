@@ -270,7 +270,9 @@ const defaultHttpConfig = ref('')
 const settingsDraft = ref({
   port: 18080,
   routesDir: '',
-  logDir: ''
+  logDir: '',
+  accessLogEnabled: false,
+  accessLogPath: ''
 })
 
 // --- 全局配置独立编辑层 ---
@@ -324,6 +326,8 @@ const openSettings = () => {
     port: current.port ?? 18080,
     routesDir: toDisplayPath(current.routesDir),
     logDir: toDisplayPath(current.logDir),
+    accessLogEnabled: Boolean(current.accessLog?.enabled),
+    accessLogPath: toDisplayPath(current.accessLog?.path || '')
   }
   settingsOpen.value = true
 }
@@ -336,6 +340,11 @@ const saveSettings = () => run(async () => {
       port: Number(settingsDraft.value.port) || current.port,
       routesDir: settingsDraft.value.routesDir.trim() || current.routesDir,
       logDir: settingsDraft.value.logDir.trim() || current.logDir,
+      accessLog: {
+        ...(current.accessLog || {}),
+        enabled: settingsDraft.value.accessLogEnabled,
+        path: settingsDraft.value.accessLogPath.trim() || current.accessLog?.path || ''
+      }
     }
   })
   window.$toast?.success?.('设置已保存')
@@ -558,6 +567,19 @@ onMounted(() => run(load))
               v-model.number="settingsDraft.port"
               type="number"
               class="w-28 rounded border border-gray-700 bg-surface-sunken px-3 py-1.5 font-mono text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <div class="flex items-center gap-3 border-t border-gray-700 pt-4">
+            <span class="w-16 shrink-0 text-xs text-gray-400">访问日志</span>
+            <label class="flex shrink-0 items-center gap-2">
+              <input v-model="settingsDraft.accessLogEnabled" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-600 bg-surface-sunken" />
+              <span class="text-xs text-gray-300">开启</span>
+            </label>
+            <input
+              v-model="settingsDraft.accessLogPath"
+              class="min-w-0 flex-1 rounded border border-gray-700 bg-surface-sunken px-3 py-1.5 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+              placeholder="logs/access.log"
             />
           </div>
 

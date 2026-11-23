@@ -4,7 +4,7 @@ const path = require('path');
 const net = require('net');
 const { execFile } = require('child_process');
 
-const { buildMainConfig, resolvePort } = require('./configBuilder');
+const { buildMainConfig, buildMimeTypes, resolvePort } = require('./configBuilder');
 const { createNginxStore } = require('./routeStore');
 
 const NGINX_DIR_NAME = 'nginx';
@@ -148,6 +148,19 @@ const createNginxController = (options = {}) => {
     return { confPath: target.confPath, content };
   };
 
+  // mime.types 供配置里的 include mime.types 使用，缺失或过期时重建
+  const ensureMimeTypes = (target) => {
+    const mimePath = path.join(target.prefixDir, 'mime.types');
+    const content = buildMimeTypes();
+    let existing = '';
+    try {
+      existing = fs.readFileSync(mimePath, 'utf8');
+    } catch (error) {
+      existing = '';
+    }
+    if (existing !== content) fs.writeFileSync(mimePath, content, 'utf8');
+  };
+
   // 保证配置文件与当前状态一致：文件缺失或内容已过期时重新生成
   const ensureConfig = () => {
     const { target, content } = buildContent();
@@ -158,6 +171,7 @@ const createNginxController = (options = {}) => {
       existing = '';
     }
     if (existing !== content) writeConfig();
+    ensureMimeTypes(target);
     return target.confPath;
   };
 

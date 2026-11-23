@@ -40,24 +40,28 @@ const toConfigPath = (target, prefix) => {
 };
 
 // http 块的默认内容，也是设置里「全局配置」的初始值
-const buildDefaultHttpBody = (nginx) => {
-  return [
-    '  default_type application/octet-stream;',
-    '  sendfile on;',
-    '  keepalive_timeout 65;',
+// 独立的 mime.types 文件内容，供配置里的 include mime.types 使用
+const buildMimeTypes = () =>
+  ['types {', ...MIME_TYPES.map((item) => '  ' + item), '}'].join('\n') + '\n';
+
+// http 块的默认内容，也是全局配置弹框的预填值
+const buildDefaultHttpBody = () =>
+  [
+    '  include       mime.types;',
+    '  default_type  application/octet-stream;',
+    '',
+    "  log_format  main  '$remote_addr - $remote_user [$time_local] \"$request\" '",
+    "                    '$status $body_bytes_sent \"$http_referer\" '",
+    "                    '\"$http_user_agent\" \"$http_x_forwarded_for\"';",
+    '',
+    '  sendfile        on;',
+    '',
+    '  keepalive_timeout  65;',
+    '',
     '  client_max_body_size 1000M;',
     '  client_body_timeout 600s;',
     '  client_header_timeout 600s;',
-    '',
-    "  log_format main '$remote_addr - $remote_user [$time_local] \"$request\" '",
-    "                  '$status $body_bytes_sent \"$http_referer\" '",
-    "                  '\"$http_user_agent\" \"$http_x_forwarded_for\"';",
-    '',
-    '  types {',
-    ...MIME_TYPES.map((item) => '    ' + item),
-    '  }',
   ].join('\n');
-};
 
 // 去掉公共缩进后再统一加两格，避免用户已有的空格被叠加
 const indentBlock = (text) => {
@@ -85,6 +89,13 @@ const buildMainConfig = (state) => {
   // http 块内容完全由用户决定；为空时只生成 server 块
   const httpBody = customHttp.trim() ? indentBlock(customHttp) : '';
 
+  // 访问日志开关：开启后追加一行，路径相对 prefix
+  const accessLogEnabled = Boolean(nginx.accessLog && nginx.accessLog.enabled);
+  const accessLogPath = (nginx.accessLog && nginx.accessLog.path) || path.posix.join(logDir, 'access.log');
+  const accessLogLine = accessLogEnabled
+    ? '  access_log ' + toConfigPath(accessLogPath, prefix) + ';'
+    : '';
+
   const lines = [
     '# 由 DevDock 生成，请勿手工修改；',
     '# http 级配置在「全局配置」中维护，location 级内容请使用路由或「原始块」路由',
@@ -99,6 +110,7 @@ const buildMainConfig = (state) => {
     '',
     'http {',
     ...(httpBody ? [httpBody, ''] : []),
+    ...(accessLogLine ? [accessLogLine, ''] : []),
     '  server {',
     '    listen ' + port + ';',
     '    server_name localhost;',
@@ -112,4 +124,4 @@ const buildMainConfig = (state) => {
   return lines.join('\n');
 };
 
-module.exports = { buildMainConfig, buildDefaultHttpBody, resolvePort, DEFAULT_PORT, MIME_TYPES };
+module.exports = { buildMainConfig, buildDefaultHttpBody, buildMimeTypes, resolvePort, DEFAULT_PORT, MIME_TYPES };

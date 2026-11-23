@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildMainConfig, resolvePort, DEFAULT_PORT } = require('./configBuilder');
+const { buildMainConfig, buildDefaultHttpBody, buildMimeTypes, resolvePort, DEFAULT_PORT } = require('./configBuilder');
 
 const baseState = (overrides = {}) => ({
   nginx: {
@@ -126,5 +126,31 @@ test('未自定义时 http 块不含任何内置内容', () => {
   assert.equal(serverIndex, httpIndex + 1, 'http 块内直接就是 server');
   assert.doesNotMatch(conf, /client_max_body_size/);
   assert.doesNotMatch(conf, /types \{/);
+});
+
+
+test('默认 http 内容使用 include mime.types', () => {
+  const body = buildDefaultHttpBody();
+  assert.match(body, /include\s+mime\.types;/);
+  assert.match(body, /log_format\s+main/);
+  assert.match(body, /client_max_body_size 1000M;/);
+  assert.doesNotMatch(body, /types \{/, '不再内联 types 块');
+});
+
+test('mime.types 文件内容可被 include', () => {
+  const content = buildMimeTypes();
+  assert.match(content, /^types \{/);
+  assert.match(content, /text\/html html htm;/);
+  assert.ok(content.trimEnd().endsWith('}'));
+});
+
+test('访问日志开关关闭时不生成 access_log', () => {
+  const conf = buildMainConfig(baseState({ accessLog: { enabled: false, path: '/Users/demo/.devdock/nginx/logs/access.log' } }));
+  assert.doesNotMatch(conf, /access_log/);
+});
+
+test('访问日志开关打开时按相对路径写入', () => {
+  const conf = buildMainConfig(baseState({ accessLog: { enabled: true, path: '/Users/demo/.devdock/nginx/logs/access.log' } }));
+  assert.match(conf, /access_log logs\/access\.log;/);
 });
 
