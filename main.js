@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, shell } = require('electron');
+const { app, BrowserWindow, Menu, Tray, shell, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fixPath = require('fix-path');
@@ -131,6 +131,16 @@ function resolveAppIconPath() {
   return candidates.find((item) => fs.existsSync(item)) || candidates[0];
 }
 
+// macOS 菜单栏图标需要单色模板图（22pt + @2x），
+// 直接缩放彩色应用图标会糊成一团
+function resolveTrayIconPath() {
+  if (process.platform === 'darwin') {
+    const template = path.join(__dirname, 'client/dist/trayTemplate.png');
+    if (fs.existsSync(template)) return template;
+  }
+  return resolveAppIconPath();
+}
+
 function hideMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.hide();
@@ -149,7 +159,11 @@ function showMainWindow() {
 function createTray() {
   if (tray) return;
 
-  tray = new Tray(resolveAppIconPath());
+  const trayImage = nativeImage.createFromPath(resolveTrayIconPath());
+  if (process.platform === 'darwin' && !trayImage.isEmpty()) {
+    trayImage.setTemplateImage(true);
+  }
+  tray = new Tray(trayImage);
   tray.setToolTip('DevDock');
 
   const trayMenu = Menu.buildFromTemplate([
