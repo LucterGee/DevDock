@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Braces, Download, FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import { Braces, Download, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import { ensureHomeDir, toDisplayPath } from '../../utils/pathDisplay'
 import RouteEditor from './RouteEditor.vue'
 import VariablesDialog from './VariablesDialog.vue'
@@ -67,6 +67,7 @@ const load = async () => {
   variables.value = overview.variables || []
   missingVariables.value = overview.missingVariables || []
   nginxSettings.value = (overview.state as any)?.nginx || null
+  defaultHttpConfig.value = (overview as any).defaultHttpConfig || ''
   if (!routes.value.some((route) => route.id === selectedId.value)) {
     selectedId.value = routes.value[0]?.id || ''
     addingTarget.value = false
@@ -265,6 +266,7 @@ const exportConfig = () => run(async () => {
 
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
+const defaultHttpConfig = ref('')
 const settingsDraft = ref({
   port: 18080,
   routesDir: '',
@@ -273,6 +275,18 @@ const settingsDraft = ref({
   accessLogPath: '',
   customHttp: ''
 })
+
+// Tab 键插入制表符而不是切换焦点，缩进原样保留
+const insertTab = (event: KeyboardEvent) => {
+  const el = event.target as HTMLTextAreaElement
+  const start = el.selectionStart
+  const end = el.selectionEnd
+  const next = el.value.slice(0, start) + '\t' + el.value.slice(end)
+  el.value = next
+  el.selectionStart = start + 1
+  el.selectionEnd = start + 1
+  settingsDraft.value.customHttp = next
+}
 
 const openSettings = () => {
   ensureHomeDir()
@@ -283,7 +297,7 @@ const openSettings = () => {
     logDir: toDisplayPath(current.logDir),
     accessLogEnabled: Boolean(current.accessLog?.enabled),
     accessLogPath: current.accessLog?.path || '',
-    customHttp: current.customHttp || ''
+    customHttp: current.customHttp || defaultHttpConfig.value
   }
   settingsOpen.value = true
 }
@@ -540,9 +554,6 @@ onMounted(() => run(load))
                 <button class="shrink-0 rounded border border-gray-700 px-2 text-gray-300 transition hover:bg-surface-hover" @click="openPath('logs')"><FolderOpen class="h-3.5 w-3.5" /></button>
               </div>
             </label>
-            <button class="mt-3 flex items-center gap-1.5 rounded border border-gray-700 px-3 py-1.5 text-xs text-gray-300 transition hover:bg-surface-hover" @click="openPath('conf')">
-              <FileText class="h-3.5 w-3.5" />打开 nginx.conf
-            </button>
           </div>
 
           <div class="border-t border-gray-700 pt-4">
@@ -562,10 +573,13 @@ onMounted(() => run(load))
               <span class="mb-1 block text-xs text-gray-400">全局配置（http 级）</span>
               <textarea
                 v-model="settingsDraft.customHttp"
-                rows="6"
+                rows="12"
                 spellcheck="false"
-                class="w-full resize-y rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                wrap="off"
+                class="w-full resize-y rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                style="tab-size: 2; white-space: pre;"
                 placeholder="gzip on;"
+                @keydown.tab.prevent="insertTab"
               ></textarea>
             </label>
           </div>

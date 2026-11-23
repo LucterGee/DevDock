@@ -27,34 +27,30 @@ const resolvePort = (nginx) => {
   return Number.isInteger(port) && port > 0 && port < 65536 ? port : DEFAULT_PORT;
 };
 
-const buildMainConfig = (state) => {
-  const nginx = (state && state.nginx) || {};
-  const port = resolvePort(nginx);
-  const prefix = escapePath(nginx.prefixDir || '');
-  const routesDir = escapePath(nginx.routesDir || '');
-  const logDir = escapePath(nginx.logDir || '');
+// nginx 用 -p 指定 prefix，配置里的相对路径都相对 prefix 解析，
+// 因此 prefix 内的路径写成相对形式，配置就不再绑定用户目录
+const toConfigPath = (target, prefix) => {
+  const absolute = escapePath(target);
+  const base = escapePath(prefix);
+  if (!base || !absolute) return absolute;
 
-  const accessLog = nginx.accessLog && nginx.accessLog.enabled
-    ? 'access_log ' + escapePath(nginx.accessLog.path) + ' main;'
-    : 'access_log off;';
-  const errorLogPath = (nginx.errorLog && nginx.errorLog.path) || path.posix.join(logDir, 'error.log');
-  const customHttp = typeof nginx.customHttp === 'string' ? nginx.customHttp.trim() : '';
-  const customHttpLines = customHttp
-    ? ['  # 自定义全局配置（来自设置）', ...customHttp.split('\n').map((line) => (line.trim() ? '  ' + line : '')), '']
-    : [];
+  const relative = path.posix.relative(base, absolute);
+  if (relative && !relative.startsWith('..') && !path.posix.isAbsolute(relative)) return relative;
+  return absolute;
+};
 
-  const lines = [
-    '# 由 DevDock 生成，请勿手工修改；',
-    '# http 级自定义指令请写在「设置 → 全局配置」中，location 级内容请使用路由或「原始块」路由',
-    'worker_processes 1;',
-    'pid ' + path.posix.join(prefix, 'nginx.pid') + ';',
-    'error_log ' + escapePath(errorLogPath) + ' warn;',
-    '',
-    'events {',
-    '  worker_connections 1024;',
-    '}',
-    '',
-    'http {',
+// http 块的默认内容，也是设置里「全局配置」的初始值
+const buildDefaultHttpBody = (nginx) => {
+  const prefix = escapePath((nginx && nginx.prefixDir) || '');
+  const logDir = (nginx && nginx.logDir) || path.posix.join(prefix, 'logs');
+  const accessLogPath = (nginx && nginx.accessLog && nginx.accessLog.path) || path.posix.join(logDir, 'access.log');
+  const accessLogEnabled = Boolean(nginx && nginx.accessLog && nginx.accessLog.enabled);
+
+  const accessLog = accessLogEnabled
+    ? '  access_log ' + toConfigPath(accessLogPath, prefix) + ' main;'
+    : '  access_log off;';
+
+  return [
     '  default_type application/octet-stream;',
     '  sendfile on;',
     '  keepalive_timeout 65;',
@@ -62,23 +58,50 @@ const buildMainConfig = (state) => {
     '  client_body_timeout 600s;',
     '  client_header_timeout 600s;',
     '',
-    '  log_format main \'$remote_addr - $remote_user [$time_local] "$request" \'',
-    '                  \'$status $body_bytes_sent "$http_referer" \'',
-    '                  \'"$http_user_agent" "$http_x_forwarded_for"\';',
+    "  log_format main '$remote_addr - $remote_user [$time_local] \"$request\" '",
+    "                  '$status $body_bytes_sent \"$http_referer\" '",
+    "                  '\"$http_user_agent\" \"$http_x_forwarded_for\"';",
     '',
-    '  ' + accessLog,
+    accessLog,
     '',
-    ...customHttpLines,
     '  types {',
     ...MIME_TYPES.map((item) => '    ' + item),
     '  }',
+  ].join('\n');
+};
+
+const buildMainConfig = (state) => {
+  const nginx = (state && state.nginx) || {};
+  const port = resolvePort(nginx);
+  const prefix = escapePath(nginx.prefixDir || '');
+  const routesDir = nginx.routesDir || path.posix.join(prefix, 'routes');
+  const logDir = nginx.logDir || path.posix.join(prefix, 'logs');
+  const errorLogPath = (nginx.errorLog && nginx.errorLog.path) || path.posix.join(logDir, 'error.log');
+
+  // 配置了全局配置就以它为准，http 块里除 server 外全部由用户掌控
+  const customHttp = typeof nginx.customHttp === 'string' ? nginx.customHttp.trim() : '';
+  const httpBody = customHttp || buildDefaultHttpBody({ ...nginx, prefixDir: prefix, logDir, routesDir });
+
+  const lines = [
+    '# 由 DevDock 生成，请勿手工修改；',
+    '# http 级配置在「设置 → 全局配置」中维护，location 级内容请使用路由或「原始块」路由',
+    '',
+    'worker_processes 1;',
+    'pid ' + toConfigPath(path.posix.join(prefix, 'nginx.pid'), prefix) + ';',
+    'error_log ' + toConfigPath(errorLogPath, prefix) + ' warn;',
+    '',
+    'events {',
+    '  worker_connections 1024;',
+    '}',
+    '',
+    'http {',
+    httpBody,
     '',
     '  server {',
     '    listen ' + port + ';',
     '    server_name localhost;',
     '',
-    '    # DevDock 路由（每个路由一个文件）',
-    '    include ' + path.posix.join(routesDir, '*.conf') + ';',
+    '    include ' + toConfigPath(path.posix.join(routesDir, '*.conf'), prefix) + ';',
     '  }',
     '}',
     '',
@@ -87,4 +110,4 @@ const buildMainConfig = (state) => {
   return lines.join('\n');
 };
 
-module.exports = { buildMainConfig, resolvePort, DEFAULT_PORT, MIME_TYPES };
+module.exports = { buildMainConfig, buildDefaultHttpBody, resolvePort, DEFAULT_PORT, MIME_TYPES };

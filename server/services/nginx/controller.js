@@ -124,7 +124,7 @@ const createNginxController = (options = {}) => {
     return target;
   };
 
-  const writeConfig = () => {
+  const buildContent = () => {
     const target = ensureDirs();
     const current = state();
     const content = buildMainConfig({
@@ -137,16 +137,27 @@ const createNginxController = (options = {}) => {
         port: resolvePort(current.nginx),
       },
     });
+    return { target, content };
+  };
+
+  const writeConfig = () => {
+    const { target, content } = buildContent();
     const tmpPath = target.confPath + '.tmp';
     fs.writeFileSync(tmpPath, content, 'utf8');
     fs.renameSync(tmpPath, target.confPath);
     return { confPath: target.confPath, content };
   };
 
-  // 首次使用（或配置被删）时先落一份默认配置，避免 nginx -t 直接报文件不存在
+  // 保证配置文件与当前状态一致：文件缺失或内容已过期时重新生成
   const ensureConfig = () => {
-    const target = ensureDirs();
-    if (!fs.existsSync(target.confPath)) writeConfig();
+    const { target, content } = buildContent();
+    let existing = '';
+    try {
+      existing = fs.readFileSync(target.confPath, 'utf8');
+    } catch (error) {
+      existing = '';
+    }
+    if (existing !== content) writeConfig();
     return target.confPath;
   };
 
