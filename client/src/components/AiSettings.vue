@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="$emit('close')" @keydown.esc="$emit('close')" tabindex="-1" ref="backdrop">
+  <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="closeDialog" @keydown.esc="closeDialog" tabindex="-1" ref="backdrop">
     <div class="w-full max-w-5xl bg-surface border border-gray-700 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[80vh] max-h-[760px]">
 
       <div class="flex items-center justify-between p-4 border-b border-gray-700 bg-surface-raised">
@@ -7,7 +7,7 @@
           <Settings class="w-5 h-5 text-gray-400" />
           全局设置
         </h3>
-        <button @click="$emit('close')" class="px-2 text-gray-400 hover:text-gray-100">✕</button>
+        <button @click="closeDialog" class="px-2 text-gray-400 hover:text-gray-100">✕</button>
       </div>
 
       <div class="flex flex-1 min-h-0 overflow-hidden">
@@ -241,12 +241,6 @@
               </button>
               <div v-else></div>
               <div class="flex gap-3">
-                <button
-                  @click="formData = null; currentEditId = null"
-                  class="px-4 py-2 text-xs text-gray-300 transition hover:text-gray-100"
-                >
-                  取消
-                </button>
                 <button
                   @click="save"
                   class="px-5 py-2 text-xs font-bold text-white transition bg-blue-600 rounded shadow-sm hover:bg-blue-500"
@@ -834,6 +828,7 @@ const selectTheme = (value) => {
 
 // 点击左侧模型列表项
 const handleSelect = (config) => {
+  applyFormData();
   currentView.value = 'model';
   isCreating.value = false;
   currentEditId.value = config.id;
@@ -842,6 +837,7 @@ const handleSelect = (config) => {
 
 // 切换到场景配置视图
 const showSceneView = () => {
+  applyFormData();
   currentView.value = 'scene';
   currentEditId.value = null;
   formData.value = null;
@@ -849,6 +845,7 @@ const showSceneView = () => {
 };
 
 const showTunnelView = () => {
+  applyFormData();
   currentView.value = 'tunnel';
   currentEditId.value = null;
   formData.value = null;
@@ -859,6 +856,7 @@ const showTunnelView = () => {
 };
 
 const showAppView = () => {
+  applyFormData();
   currentView.value = 'app';
   currentEditId.value = null;
   formData.value = null;
@@ -867,6 +865,7 @@ const showAppView = () => {
 };
 
 const showToolView = () => {
+  applyFormData();
   currentView.value = 'tool';
   currentEditId.value = null;
   formData.value = null;
@@ -874,6 +873,7 @@ const showToolView = () => {
 };
 
 const showAppearanceView = () => {
+  applyFormData();
   currentView.value = 'appearance';
   currentEditId.value = null;
   formData.value = null;
@@ -881,6 +881,7 @@ const showAppearanceView = () => {
 };
 
 const showReminderView = () => {
+  applyFormData();
   currentView.value = 'reminder';
   currentEditId.value = null;
   formData.value = null;
@@ -907,22 +908,36 @@ const setActive = (id) => {
 };
 
 // 保存逻辑
+// 把编辑中的表单写回配置列表；新增态要求必填项齐全才落库
+const applyFormData = () => {
+  const data = formData.value;
+  if (!data) return false;
+
+  if (isCreating.value) {
+    if (!data.name || !data.baseURL || !data.apiKey) return false;
+    addConfig({ ...data });
+    const last = configList.value[configList.value.length - 1];
+    currentEditId.value = last.id;
+    formData.value = { ...last };
+    isCreating.value = false;
+    return true;
+  }
+
+  updateConfig(data.id, data);
+  return true;
+};
+
 const save = () => {
   if (!formData.value.name) return $toast.warning('名称不能为空');
   if (!formData.value.baseURL) return $toast.warning('Base URL 不能为空');
   if (!formData.value.apiKey) return $toast.warning('API Key 不能为空');
+  applyFormData();
+  $toast.success('保存成功');
+};
 
-  if (isCreating.value) {
-    addConfig(formData.value);
-    const last = configList.value[configList.value.length - 1];
-    handleSelect(last);
-  } else {
-    updateConfig(formData.value.id, formData.value);
-    const updated = configList.value.find(c => c.id === formData.value.id);
-    handleSelect(updated);
-  }
-
-  $toast.success('保存成功')
+const closeDialog = () => {
+  applyFormData();
+  emit('close');
 };
 
 const handleDelete = async () => {
