@@ -135,7 +135,7 @@
             title="选择 Node 版本"
           >
             <option value="auto">
-              {{ p.detectedNodeVersion ? `自动 (${p.detectedNodeVersion.raw})` : '自动检测' }}
+              {{ autoNodeVersionLabel(p) }}
             </option>
             <option value="system">系统默认</option>
             <option v-for="v in installedNodeVersions" :key="v" :value="v">
@@ -581,6 +581,15 @@ const getNodeVersionBadgeStyle = (source) => {
   }
 }
 
+// 自动模式显示的是解析后的实际版本，而不是 .nvmrc 里的原始约束
+const autoNodeVersionLabel = (p) => {
+  const resolved = p.resolvedNodeVersion && p.resolvedNodeVersion.version
+  if (resolved) return `自动 (v${resolved})`
+  const raw = p.detectedNodeVersion && p.detectedNodeVersion.raw
+  if (raw) return `自动 (未匹配 ${raw})`
+  return '自动检测'
+}
+
 const getNodeVersionLabel = (p) => {
   if (p.effectiveNodeVersion) {
     return `v${p.effectiveNodeVersion}`
@@ -592,8 +601,12 @@ const getNodeVersionTooltip = (p) => {
   if (p.nodeVersionSource === 'manual') {
     return `手动指定: v${p.effectiveNodeVersion}`
   }
-  if (p.nodeVersionSource === 'auto' && p.detectedNodeVersion) {
-    return `自动检测: ${p.detectedNodeVersion.raw} (来源: ${p.detectedNodeVersion.source})`
+  if (p.nodeVersionSource === 'auto') {
+    const resolved = p.resolvedNodeVersion && p.resolvedNodeVersion.version
+    const raw = p.detectedNodeVersion && p.detectedNodeVersion.raw
+    if (!raw) return '自动检测: 未声明 Node 版本要求，使用系统默认'
+    const target = resolved ? `v${resolved}` : '未匹配到已安装版本'
+    return `自动: ${target}（要求 ${raw}，来源 ${p.detectedNodeVersion.source}）`
   }
   return '使用系统默认 Node 版本'
 }

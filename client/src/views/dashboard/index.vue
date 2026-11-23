@@ -173,7 +173,22 @@ const refreshNodeVersions = () => {
     if (!data) return
     nvmDetected.value = data.nvmDetected
     installedNodeVersions.value = data.versions || []
+    // 版本列表变了，各项目「自动」解析出的具体版本可能跟着变
+    refreshProjectNodeVersions()
   })
+}
+
+// 重新解析每个项目的自动 Node 版本，避免安装/删除版本后卡片上的版本号过期
+const refreshProjectNodeVersions = () => {
+  for (const project of rawProjects.value) {
+    socket.emit('node:detect-version', { projectPath: project.path }, (result) => {
+      if (!result) return
+      const target = rawProjects.value.find((item) => item.path === project.path)
+      if (!target) return
+      target.detectedNodeVersion = result.detected
+      target.resolvedNodeVersion = result.resolved
+    })
+  }
 }
 
 onMounted(() => {
