@@ -72,7 +72,7 @@
             <div
               @click="showSceneView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'scene' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'scene' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <Target class="w-3.5 h-3.5" />
               <span class="text-sm font-medium">场景配置</span>
@@ -85,7 +85,7 @@
             <div
               @click="showTunnelView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'tunnel' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'tunnel' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">T</span>
               <span class="text-sm font-medium">Tunnel</span>
@@ -93,7 +93,7 @@
             <div
               @click="showNodeView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'node' ? 'bg-lime-500/20 text-lime-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'node' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">N</span>
               <span class="text-sm font-medium">Node 版本</span>
@@ -101,7 +101,7 @@
             <div
               @click="showToolView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'tool' ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'tool' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">W</span>
               <span class="text-sm font-medium">开发工具</span>
@@ -114,7 +114,7 @@
             <div
               @click="showAppearanceView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'appearance' ? 'bg-indigo-500/20 text-indigo-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'appearance' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <Palette class="w-3.5 h-3.5" />
               <span class="text-sm font-medium">外观</span>
@@ -122,7 +122,7 @@
             <div
               @click="showReminderView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'reminder' ? 'bg-amber-500/20 text-amber-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'reminder' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <Timer class="w-3.5 h-3.5" />
               <span class="text-sm font-medium">倒计时提醒</span>
@@ -130,7 +130,7 @@
             <div
               @click="showAppView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'app' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:bg-surface-hover'"
+              :class="currentView === 'app' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <span class="text-sm">U</span>
               <span class="text-sm font-medium">应用更新</span>
@@ -268,7 +268,7 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
-                  <Target class="w-4 h-4 text-purple-400" />
+                  <Target class="w-4 h-4 text-blue-400" />
                   场景配置
                 </h4>
               </div>
@@ -368,7 +368,7 @@
                   <input
                     type="checkbox"
                     v-model="tunnelConfig.autoSwitchOnRun"
-                    class="w-4 h-4 bg-gray-700 border-gray-600 rounded text-cyan-500 focus:ring-0"
+                    class="w-4 h-4 bg-gray-700 border-gray-600 rounded text-blue-500 focus:ring-0"
                   >
                   运行项目脚本自动切换隧道映射
                 </label>
@@ -436,7 +436,7 @@
                       class="min-w-0 flex-1 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                     >
                     <button
-                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-emerald-500 hover:text-emerald-400"
+                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400"
                       @click="pickFilePath((p) => (wechatDevtoolsConfig.path = p))"
                     >选择</button>
                   </div>
@@ -467,7 +467,7 @@
                       class="min-w-0 flex-1 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                     >
                     <button
-                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-emerald-500 hover:text-emerald-400"
+                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400"
                       @click="pickFilePath((p) => updateTerminalCustomApp(p))"
                     >选择</button>
                   </div>
@@ -492,7 +492,7 @@
                       class="min-w-0 flex-1 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                     >
                     <button
-                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-emerald-500 hover:text-emerald-400"
+                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400"
                       @click="pickFilePath((p) => (editorConfig.customCommand = p))"
                     >选择</button>
                   </div>
@@ -517,13 +517,14 @@
                   <h5 class="text-[11px] font-bold tracking-wider text-gray-500 uppercase">已安装</h5>
                 </div>
                 <div v-if="!nodeVersions.length" class="py-2 text-xs text-gray-500">未检测到任何 Node 版本</div>
+                <div v-else class="max-h-64 overflow-y-auto overscroll-contain">
                 <div
                   v-for="item in nodeVersions"
                   :key="item.version"
                   class="flex items-center gap-3 border-b border-gray-700/60 py-2 text-sm last:border-b-0"
                 >
                   <span class="w-24 font-mono text-gray-100">v{{ item.version }}</span>
-                  <span class="text-xs" :class="item.source === 'managed' ? 'text-lime-400' : 'text-gray-500'">
+                  <span class="text-xs" :class="item.source === 'managed' ? 'text-blue-400' : 'text-gray-500'">
                     {{ item.source === 'managed' ? '应用内' : 'nvm' }}
                   </span>
                   <button
@@ -531,6 +532,7 @@
                     class="ml-auto rounded px-2 py-1 text-xs text-gray-400 transition hover:bg-surface-hover hover:text-red-400"
                     @click="removeNode(item.version)"
                   >删除</button>
+                  </div>
                 </div>
               </section>
 
@@ -541,22 +543,24 @@
                 <div class="flex gap-2">
                   <select
                     v-model="nodeSelectedVersion"
-                    class="min-w-0 flex-1 rounded border border-gray-600 bg-surface-raised px-3 py-2 text-sm text-gray-100 focus:border-lime-500 focus:outline-none transition"
+                    class="min-w-0 flex-1 rounded border border-gray-600 bg-surface-raised px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none transition"
                   >
                     <option value="">选择版本…</option>
-                    <option v-for="item in nodeAvailable" :key="item.version" :value="item.version">
-                      v{{ item.version }}{{ item.lts ? ' · LTS ' + item.lts : '' }}
-                    </option>
+                    <optgroup v-for="group in nodeAvailableGroups" :key="group.major" :label="'v' + group.major">
+                      <option v-for="item in group.items" :key="item.version" :value="item.version">
+                        v{{ item.version }}{{ item.lts ? ' · LTS ' + item.lts : '' }}
+                      </option>
+                    </optgroup>
                   </select>
                   <button
-                    class="shrink-0 rounded bg-lime-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-lime-500 disabled:opacity-50"
+                    class="shrink-0 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
                     :disabled="!nodeSelectedVersion || nodeInstalling"
                     @click="installNode"
                   >{{ nodeInstalling ? '安装中…' : '安装' }}</button>
                 </div>
                 <div v-if="nodeInstalling" class="mt-3">
                   <div class="h-1.5 w-full overflow-hidden rounded bg-surface-sunken">
-                    <div class="h-full bg-lime-500 transition-all" :style="{ width: nodeProgress + '%' }"></div>
+                    <div class="h-full bg-blue-500 transition-all" :style="{ width: nodeProgress + '%' }"></div>
                   </div>
                   <div class="mt-1 text-xs text-gray-500">v{{ nodeInstallingVersion }} · {{ nodeProgress }}%</div>
                 </div>
@@ -569,7 +573,7 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
-                  <Palette class="w-4 h-4 text-indigo-400" />
+                  <Palette class="w-4 h-4 text-blue-400" />
                   外观
                 </h4>
               </div>
@@ -583,10 +587,10 @@
                   :class="themeMode === option.value ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 bg-surface-raised hover:border-gray-600'"
                 >
                   <div class="flex items-center justify-between mb-2">
-                    <component :is="option.icon" class="w-5 h-5" :class="themeMode === option.value ? 'text-indigo-400' : 'text-gray-400'" />
-                    <Check v-if="themeMode === option.value" class="w-4 h-4 text-indigo-400" />
+                    <component :is="option.icon" class="w-5 h-5" :class="themeMode === option.value ? 'text-blue-400' : 'text-gray-400'" />
+                    <Check v-if="themeMode === option.value" class="w-4 h-4 text-blue-400" />
                   </div>
-                  <div class="text-sm font-medium" :class="themeMode === option.value ? 'text-indigo-300' : 'text-gray-200'">{{ option.label }}</div>
+                  <div class="text-sm font-medium" :class="themeMode === option.value ? 'text-blue-400' : 'text-gray-200'">{{ option.label }}</div>
                 </button>
               </div>
             </div>
@@ -597,7 +601,7 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
-                  <Timer class="w-4 h-4 text-amber-400" />
+                  <Timer class="w-4 h-4 text-blue-400" />
                   倒计时提醒
                 </h4>
               </div>
@@ -607,7 +611,7 @@
                   <input
                     type="checkbox"
                     v-model="countdownReminderConfig.enabled"
-                    class="w-4 h-4 bg-gray-700 border-gray-600 rounded text-amber-500 focus:ring-0"
+                    class="w-4 h-4 bg-gray-700 border-gray-600 rounded text-blue-500 focus:ring-0"
                   >
                   启用系统倒计时提醒
                 </label>
@@ -684,7 +688,7 @@
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-gray-400">当前版本</span>
-                    <span class="font-mono text-cyan-300">v{{ appUpdate.currentVersion || '-' }}</span>
+                    <span class="font-mono text-gray-100">v{{ appUpdate.currentVersion || '-' }}</span>
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-gray-400">最新版本</span>
@@ -954,6 +958,19 @@ const nodeSelectedVersion = ref('');
 const nodeInstalling = ref(false);
 const nodeInstallingVersion = ref('');
 const nodeProgress = ref(0);
+
+// 可选版本按大版本分组，避免几百个选项平铺
+const nodeAvailableGroups = computed(() => {
+  const groups = new Map();
+  for (const item of nodeAvailable.value) {
+    const major = String(item.version).split('.')[0];
+    if (!groups.has(major)) groups.set(major, []);
+    groups.get(major).push(item);
+  }
+  return [...groups.entries()]
+    .map(([major, items]) => ({ major, items }))
+    .sort((a, b) => Number(b.major) - Number(a.major));
+});
 
 const loadNodeVersions = () => {
   socket.emit('node:get-versions', (result) => {
