@@ -20,6 +20,7 @@ const {
   resolveTerminalCandidates,
 } = require('./utils/terminalLauncher');
 const { createWeeklyReportRuntime } = require('./services/weeklyReport/runtime');
+const { createNginxRuntime } = require('./services/nginx/runtime');
 const { discoverAuthors, collectActivity, runGit } = require('./services/weeklyReport/gitActivity');
 const { buildReportContext } = require('./services/weeklyReport/reportContext');
 const { generateText } = require('./services/ai/generateText');
@@ -802,6 +803,8 @@ const openFolderDialogByElectron = async () => {
 };
 
 // --- Socket 逻辑 ---
+const nginxRuntime = createNginxRuntime();
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   socket.emit('tunnel:state', getTunnelStatePayload());
@@ -1788,6 +1791,141 @@ if ($folder) { $folder.Self.Path }
       callback({ success: false, error: e.message });
     }
   });
+
+  // ---------- Nginx 路由管理 ----------
+  const nginxReply = (callback, payload) => {
+    if (typeof callback === 'function') callback(payload);
+  };
+  const nginxGuard = (callback, fn) => {
+    try {
+      nginxReply(callback, { success: true, data: fn() });
+    } catch (e) {
+      nginxReply(callback, { success: false, error: e.message });
+    }
+  };
+  const nginxGuardAsync = async (callback, fn) => {
+    try {
+      nginxReply(callback, { success: true, data: await fn() });
+    } catch (e) {
+      nginxReply(callback, { success: false, error: e.message });
+    }
+  };
+
+  // 写盘 + 校验 + 重载，任一步失败都返回明细由前端提示
+  const nginxSync = async (options = {}) => {
+    const applied = nginxRuntime.apply({ force: options.force || [] });
+    const testResult = await nginxRuntime.validate();
+    if (!testResult.ok) {
+      return { applied, tested: false, reloaded: false, error: testResult.error || '配置校验失败' };
+    }
+    const status = nginxRuntime.controller.status();
+    if (!status.running) {
+      return { applied, tested: true, reloaded: false, reason: 'not-running' };
+    }
+    const reloadResult = await nginxRuntime.reload();
+    return {
+      applied,
+      tested: true,
+      reloaded: reloadResult.ok,
+      error: reloadResult.ok ? '' : reloadResult.error || '重载失败',
+    };
+  };
+
+  socket.on('nginx:overview', (callback) => nginxGuard(callback, () => nginxRuntime.overview()));
+
+  socket.on('nginx:export', (callback) => nginxGuard(callback, () => nginxRuntime.exportPayload()));
+
+  socket.on('nginx:import-json', ({ payload }, callback) => nginxGuard(callback, () => {
+    const result = nginxRuntime.importPayload(payload);
+    if (!result.ok) throw new Error(result.error);
+    nginxRuntime.apply();
+    return result;
+  }));
+
+  socket.on('nginx:route:save', ({ route }, callback) => nginxGuard(callback, () => {
+    const saved = nginxRuntime.upsertRoute(route);
+    nginxRuntime.apply();
+    return saved;
+  }));
+
+  socket.on('nginx:route:remove', ({ id }, callback) => nginxGuard(callback, () => {
+    const removed = nginxRuntime.removeRoute(id);
+    nginxRuntime.apply();
+    return { removed };
+  }));
+
+  socket.on('nginx:route:toggle', ({ id, enabled }, callback) => nginxGuard(callback, () => {
+    const route = nginxRuntime.setEnabled(id, enabled);
+    nginxRuntime.apply();
+    return route;
+  }));
+
+  socket.on('nginx:target:add', ({ routeId, target }, callback) => nginxGuard(callback, () => {
+    const route = nginxRuntime.addTarget(routeId, target);
+    nginxRuntime.apply();
+    return route;
+  }));
+
+  socket.on('nginx:target:remove', ({ routeId, targetId }, callback) => nginxGuard(callback, () => {
+    const route = nginxRuntime.removeTarget(routeId, targetId);
+    nginxRuntime.apply();
+    return route;
+  }));
+
+  socket.on('nginx:target:active', ({ routeId, targetId }, callback) => nginxGuard(callback, () => {
+    const route = nginxRuntime.setActiveTarget(routeId, targetId);
+    nginxRuntime.apply();
+    return route;
+  }));
+
+  socket.on('nginx:conflict:resolve', ({ id, action }, callback) => nginxGuard(callback, () => {
+    const result = nginxRuntime.resolveConflict(id, action);
+    nginxRuntime.apply();
+    return result;
+  }));
+
+  socket.on('nginx:settings:save', ({ nginx }, callback) => nginxGuard(callback, () => {
+    const state = nginxRuntime.store.load();
+    state.nginx = { ...state.nginx, ...(nginx || {}) };
+    nginxRuntime.store.save(state);
+    nginxRuntime.apply();
+    return state.nginx;
+  }));
+
+  socket.on('nginx:sync', (options, callback) => nginxGuardAsync(callback, () => nginxSync(options || {})));
+  socket.on('nginx:validate', (callback) => nginxGuardAsync(callback, () => nginxRuntime.validate()));
+  socket.on('nginx:reload', (callback) => nginxGuardAsync(callback, () => nginxRuntime.reload()));
+  socket.on('nginx:start', (callback) => nginxGuardAsync(callback, () => nginxRuntime.start()));
+  socket.on('nginx:stop', (callback) => nginxGuardAsync(callback, () => nginxRuntime.stop()));
+  socket.on('nginx:restart', (callback) => nginxGuardAsync(callback, () => nginxRuntime.restart()));
+
+  socket.on('nginx:open-path', ({ which }, callback) => nginxGuard(callback, () => {
+    const target = nginxRuntime.controller.paths();
+    const map = {
+      prefix: target.prefixDir,
+      routes: target.routesDir,
+      logs: target.logDir,
+      conf: target.confPath,
+    };
+    const openTarget = map[which] || target.prefixDir;
+    if (which === 'conf') {
+      const editor = nginxRuntime.store.load().nginx.editor;
+      const editorCommands = { vscode: 'code', cursor: 'cursor', sublime: 'subl' };
+      const command = editorCommands[editor];
+      if (command) {
+        execFile(command, ['-g', openTarget], () => {});
+        return { opened: openTarget, via: command };
+      }
+    }
+    if (process.platform === 'win32') {
+      exec(`explorer "${openTarget}"`);
+    } else if (process.platform === 'darwin') {
+      execFile('open', [openTarget], () => {});
+    } else {
+      execFile('xdg-open', [openTarget], () => {});
+    }
+    return { opened: openTarget, via: 'system' };
+  }));
 });
 
 // --- ✨ 核心修复：监听主进程退出事件 ---
