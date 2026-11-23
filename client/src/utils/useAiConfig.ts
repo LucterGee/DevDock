@@ -13,6 +13,7 @@ const STORAGE_KEY_SCENES = 'ai_scene_configs';
 const STORAGE_KEY_TUNNEL = 'ai_tunnel_config';
 const STORAGE_KEY_WECHAT_DEVTOOLS = 'wechat_devtools_config';
 const STORAGE_KEY_TERMINAL = 'terminal_config';
+const STORAGE_KEY_EDITOR = 'editor_config';
 const STORAGE_KEY_COUNTDOWN_REMINDER = 'countdown_reminder_config';
 
 const DEFAULT_CONFIG: any = {
@@ -36,8 +37,10 @@ const tunnelConfig = ref({
   activeProjectPath: ''
 });
 const wechatDevtoolsConfig = ref({
-  windowsPath: '',
-  macosPath: ''
+  path: ''
+});
+const editorConfig = ref({
+  editorId: 'vscode'
 });
 
 export type TerminalPlatformConfig = { preset: string; customApp: string };
@@ -99,9 +102,23 @@ const init = () => {
 
   socket.emit('config:load', STORAGE_KEY_WECHAT_DEVTOOLS, (data: any) => {
     if (data && typeof data === 'object') {
+      // 旧配置里按系统拆分的字段读一次兼容
+      const legacyPath =
+        typeof data.macosPath === 'string' && data.macosPath
+          ? data.macosPath
+          : typeof data.windowsPath === 'string'
+            ? data.windowsPath
+            : '';
       wechatDevtoolsConfig.value = {
-        windowsPath: typeof data.windowsPath === 'string' ? data.windowsPath : '',
-        macosPath: typeof data.macosPath === 'string' ? data.macosPath : ''
+        path: typeof data.path === 'string' && data.path ? data.path : legacyPath
+      };
+    }
+  });
+
+  socket.emit('config:load', STORAGE_KEY_EDITOR, (data: any) => {
+    if (data && typeof data === 'object') {
+      editorConfig.value = {
+        editorId: typeof data.editorId === 'string' && data.editorId ? data.editorId : 'vscode'
       };
     }
   });
@@ -153,6 +170,12 @@ watch(tunnelConfig, (newVal) => {
 watch(wechatDevtoolsConfig, (newVal) => {
   if (isLoaded.value) {
     socket.emit('config:save', { key: STORAGE_KEY_WECHAT_DEVTOOLS, value: newVal });
+  }
+}, { deep: true });
+
+watch(editorConfig, (newVal) => {
+  if (isLoaded.value) {
+    socket.emit('config:save', { key: STORAGE_KEY_EDITOR, value: newVal });
   }
 }, { deep: true });
 
@@ -212,6 +235,7 @@ export function useAiConfig() {
     sceneConfigs,
     tunnelConfig,
     wechatDevtoolsConfig,
+    editorConfig,
     terminalConfig,
     countdownReminderConfig,
     getSceneConfig,

@@ -30,6 +30,12 @@ const {
   normalizeWechatDevtoolsConfig,
   resolveWechatLaunchSpec,
 } = require('./utils/projectTools');
+const {
+  EDITOR_CONFIG_KEY,
+  normalizeEditorConfig,
+  resolveEditorLaunch,
+  describeLaunchError,
+} = require('./utils/editors');
 
 // 配置文件存在用户目录下，防止误删
 const CONFIG_PATH = path.join(os.homedir(), '.devdock-config.json');
@@ -1420,6 +1426,33 @@ if ($folder) { $folder.Self.Path }
     callback?.({
       platform: process.platform,
       presets: getTerminalPresets(process.platform)
+    });
+  });
+
+  socket.on('editor:open-project', ({ projectPath }, callback) => {
+    const respond = (payload) => {
+      if (typeof callback === 'function') callback(payload);
+    };
+
+    const target = String(projectPath || '').trim();
+    if (!target || !fs.existsSync(target)) {
+      respond({ success: false, error: '项目路径不存在：' + target });
+      return;
+    }
+
+    const config = normalizeEditorConfig(readConfigFile()[EDITOR_CONFIG_KEY]);
+    const spec = resolveEditorLaunch(config.editorId, target, process.platform);
+    if (!spec) {
+      respond({ success: false, error: '无法解析编辑器启动命令' });
+      return;
+    }
+
+    execFile(spec.command, spec.args, { timeout: 15000 }, (error, stdout, stderr) => {
+      if (error) {
+        respond({ success: false, error: describeLaunchError(error, stderr, spec) });
+        return;
+      }
+      respond({ success: true, editorId: config.editorId });
     });
   });
 

@@ -330,7 +330,7 @@
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400/80">weekly report</span>
                       </div>
                       <select v-model="sceneConfigs.weeklyReport" class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500/50 focus:outline-none transition">
-                        <option value="">Follow global default ({{ globalModelName }})</option>
+                        <option value="">跟随全局默认 ({{ globalModelName }})</option>
                         <option v-for="c in configList" :key="c.id" :value="c.id">{{ c.name }} - {{ c.model }}</option>
                       </select>
                     </div>
@@ -431,21 +431,11 @@
 
               <div class="space-y-5">
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
-                  <label class="block mb-2 text-sm font-medium text-gray-100">Windows 路径</label>
+                  <label class="block mb-2 text-sm font-medium text-gray-100">微信开发者工具路径</label>
                   <input
-                    v-model="wechatDevtoolsConfig.windowsPath"
+                    v-model="wechatDevtoolsConfig.path"
                     type="text"
-                    placeholder="支持目录、cli.bat 或 微信开发者工具.exe"
-                    class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
-                </div>
-
-                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
-                  <label class="block mb-2 text-sm font-medium text-gray-100">macOS 路径</label>
-                  <input
-                    v-model="wechatDevtoolsConfig.macosPath"
-                    type="text"
-                    placeholder="支持 .app 或 cli 路径"
+                    :placeholder="serverPlatform === 'win32' ? '支持目录、cli.bat 或 微信开发者工具.exe' : '支持 .app、cli 或安装目录'"
                     class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
                   >
                 </div>
@@ -476,9 +466,18 @@
                   >
                 </div>
 
-                <div class="text-xs text-gray-500">
-                  输入后会自动保存到本地配置文件，当前平台未配置时，小程序项目上的微信开发者工具按钮会保持禁用状态。
+                <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
+                  <label class="block mb-2 text-sm font-medium text-gray-100">用编辑器打开</label>
+                  <select
+                    :value="editorConfig.editorId"
+                    @change="editorConfig.editorId = $event.target.value"
+                    class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 focus:outline-none transition"
+                  >
+                    <option value="vscode">VS Code</option>
+                    <option value="system">系统默认</option>
+                  </select>
                 </div>
+
               </div>
             </div>
           </template>
@@ -702,6 +701,7 @@ const {
   activeConfig,
   tunnelConfig,
   wechatDevtoolsConfig,
+  editorConfig,
   terminalConfig,
   countdownReminderConfig,
   addConfig,

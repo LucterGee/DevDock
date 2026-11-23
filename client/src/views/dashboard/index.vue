@@ -218,13 +218,7 @@ const runningProjectCount = computed(() => {
 })
 
 const wechatDevtoolsConfigured = computed(() => {
-  if (currentPlatform === 'win32') {
-    return !!String(wechatDevtoolsConfig.value.windowsPath || '').trim()
-  }
-  if (currentPlatform === 'darwin') {
-    return !!String(wechatDevtoolsConfig.value.macosPath || '').trim()
-  }
-  return false
+  return !!String(wechatDevtoolsConfig.value.path || '').trim()
 })
 
 // --- Socket 事件处理 ---
@@ -372,6 +366,14 @@ const handleStop = (p) => {
   if (stats.value[p.path]) delete stats.value[p.path]
 }
 
+const handleOpenInEditor = (projectPath) => {
+  socket.emit('editor:open-project', { projectPath }, (result) => {
+    if (!result?.success) {
+      window.$toast?.warning?.(result?.error || '打开编辑器失败');
+    }
+  })
+}
+
 const handleOpenWechatDevtools = (p) => {
   socket.emit('tool:open-wechat-devtools', { projectPath: p.path }, ({ success, error }) => {
     if (success) {
@@ -511,6 +513,7 @@ const toggleHide = (p) => {
         @stop-command="handleStopCommand"
         @open-folder="(path) => socket.emit('open-project-folder', path)"
         @open-terminal="handleOpenTerminal"
+        @open-in-editor="handleOpenInEditor"
         @open-file="(uri) => socket.emit('open-file', uri)"
         @toggle-hide="toggleHide"
         @open-wechat-devtools="handleOpenWechatDevtools"

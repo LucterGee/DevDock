@@ -66,6 +66,13 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
             </button>
             <button
+              @click.stop="$emit('open-in-editor', p.path)"
+              title="用编辑器打开"
+              class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-blue-400"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            </button>
+            <button
               @click.stop="$emit('toggle-hide', p)"
               :title="!isHidden(p.path) ? '隐藏' : '退出隐藏'"
               class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-red-400"
@@ -336,6 +343,7 @@ const emit = defineEmits([
   'stop-command',
   'open-folder',
   'open-terminal',
+  'open-in-editor',
   'open-file',
   'toggle-hide',
   'open-wechat-devtools',

@@ -10,16 +10,21 @@ const {
   getWechatCliCandidates,
 } = require('./projectTools');
 
-test('normalizeWechatDevtoolsConfig trims configured platform paths', () => {
-  const result = normalizeWechatDevtoolsConfig({
-    windowsPath: '  C:\\Program Files\\WeChat\\cli.bat  ',
-    macosPath: '  /Applications/wechatwebdevtools.app  ',
-  });
-
-  assert.deepEqual(result, {
-    windowsPath: 'C:\\Program Files\\WeChat\\cli.bat',
-    macosPath: '/Applications/wechatwebdevtools.app',
-  });
+test('normalizeWechatDevtoolsConfig 读取单一路径并兼容旧字段', () => {
+  assert.deepEqual(
+    normalizeWechatDevtoolsConfig({ path: '  /Applications/wechatwebdevtools.app  ' }),
+    { path: '/Applications/wechatwebdevtools.app' }
+  );
+  // 旧配置里按系统拆分的字段读一次兼容
+  assert.deepEqual(
+    normalizeWechatDevtoolsConfig({ macosPath: '  /Applications/wechatwebdevtools.app  ' }),
+    { path: '/Applications/wechatwebdevtools.app' }
+  );
+  assert.deepEqual(
+    normalizeWechatDevtoolsConfig({ windowsPath: ' C:\\WeChat\\cli.bat ' }),
+    { path: 'C:\\WeChat\\cli.bat' }
+  );
+  assert.deepEqual(normalizeWechatDevtoolsConfig({}), { path: '' });
 });
 
 test('getWechatCliCandidates derives cli.bat from a Windows install directory', () => {
@@ -100,7 +105,7 @@ test('resolveWechatLaunchSpec reports missing configured tool path clearly', () 
 
   assert.deepEqual(result, {
     success: false,
-    error: '请先在设置中配置 Windows 微信开发者工具路径',
+    error: '请先在设置中配置微信开发者工具路径',
     launchSpec: null,
     configuredPath: '',
     candidates: [],

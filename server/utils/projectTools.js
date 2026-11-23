@@ -8,10 +8,12 @@ const trimString = (value) => (typeof value === 'string' ? value.trim() : '');
 function normalizeWechatDevtoolsConfig(rawConfig) {
   const source = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
 
-  return {
-    windowsPath: trimString(source.windowsPath),
-    macosPath: trimString(source.macosPath),
-  };
+  // 路径不再按系统拆分；旧配置里的 windowsPath / macosPath 读一次兼容
+  const configuredPath = trimString(source.path)
+    || trimString(source.windowsPath)
+    || trimString(source.macosPath);
+
+  return { path: configuredPath };
 }
 
 function getWechatCliCandidates(configuredPath, platform = process.platform) {
@@ -126,17 +128,12 @@ function getWechatLaunchSpec(targetPath, platform = process.platform) {
 
 function resolveWechatCliPath(config, platform = process.platform, fileExists = fs.existsSync) {
   const normalizedConfig = normalizeWechatDevtoolsConfig(config);
-  const configuredPath = platform === 'win32'
-    ? normalizedConfig.windowsPath
-    : platform === 'darwin'
-      ? normalizedConfig.macosPath
-      : '';
+  const configuredPath = normalizedConfig.path;
 
   if (!configuredPath) {
-    const platformLabel = platform === 'darwin' ? 'macOS' : platform === 'win32' ? 'Windows' : '当前平台';
     return {
       success: false,
-      error: `请先在设置中配置 ${platformLabel} 微信开发者工具路径`,
+      error: '请先在设置中配置微信开发者工具路径',
       cliPath: '',
       configuredPath: '',
       candidates: [],
@@ -173,17 +170,12 @@ function resolveWechatCliPath(config, platform = process.platform, fileExists = 
 
 function resolveWechatLaunchSpec(config, platform = process.platform, fileExists = fs.existsSync) {
   const normalizedConfig = normalizeWechatDevtoolsConfig(config);
-  const configuredPath = platform === 'win32'
-    ? normalizedConfig.windowsPath
-    : platform === 'darwin'
-      ? normalizedConfig.macosPath
-      : '';
+  const configuredPath = normalizedConfig.path;
 
   if (!configuredPath) {
-    const platformLabel = platform === 'darwin' ? 'macOS' : platform === 'win32' ? 'Windows' : '当前平台';
     return {
       success: false,
-      error: `请先在设置中配置 ${platformLabel} 微信开发者工具路径`,
+      error: '请先在设置中配置微信开发者工具路径',
       launchSpec: null,
       configuredPath: '',
       candidates: [],
