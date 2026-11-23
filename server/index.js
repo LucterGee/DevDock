@@ -924,6 +924,56 @@ io.on('connection', (socket) => {
     });
   });
 
+  // 仅返回所选文件，供自定义路径类配置使用
+  socket.on('dialog:select-file', async (callback) => {
+    const respond = (payload) => {
+      if (typeof callback === 'function') callback(payload);
+    };
+
+    try {
+      const electron = require('electron');
+      const dialog = electron?.dialog;
+      if (dialog && typeof dialog.showOpenDialog === 'function') {
+        const parentWindow =
+          typeof electron?.BrowserWindow?.getFocusedWindow === 'function'
+            ? electron.BrowserWindow.getFocusedWindow() || undefined
+            : undefined;
+        const { canceled, filePaths } = await dialog.showOpenDialog(parentWindow, {
+          title: '请选择文件',
+          properties: ['openFile'],
+        });
+        const selectedPath = canceled ? '' : (filePaths?.[0] || '');
+        respond({ success: Boolean(selectedPath), path: selectedPath });
+        return;
+      }
+    } catch (e) {
+      // 非 Electron 环境，继续走系统原生弹窗
+    }
+
+    const command = process.platform === 'win32'
+      ? {
+          cmd: 'powershell',
+          args: [
+            '-NoProfile',
+            '-NonInteractive',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-Command',
+            "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.OpenFileDialog; if ($d.ShowDialog() -eq 'OK') { $d.FileName }",
+          ],
+        }
+      : { cmd: 'osascript', args: ['-e', 'POSIX path of (choose file with prompt "请选择文件")'] };
+
+    const child = spawn(command.cmd, command.args);
+    let output = '';
+    child.stdout.on('data', (data) => { output += data.toString(); });
+    child.on('error', (error) => respond({ success: false, error: error.message }));
+    child.on('close', () => {
+      const selectedPath = output.trim().split('\n')[0] || '';
+      respond({ success: Boolean(selectedPath), path: selectedPath });
+    });
+  });
+
   socket.on('open-folder-dialog', async () => {
     console.log('正在唤起文件夹选择弹窗...');
 

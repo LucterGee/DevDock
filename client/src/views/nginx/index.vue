@@ -431,7 +431,6 @@ onMounted(() => run(load))
               <input
                 v-model="noteDraft"
                 class="mt-1 block w-full rounded border border-gray-700 bg-surface px-2 py-1.5 text-sm text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-                placeholder="备注"
               />
             </label>
           </div>

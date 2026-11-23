@@ -153,7 +153,7 @@
                   <div class="space-y-4">
                     <div>
                       <label class="block mb-1 text-xs text-gray-500">显示名称 (别名)</label>
-                      <input v-model="formData.name" type="text" placeholder="例如：DeepSeek V3" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none transition">
+                      <input v-model="formData.name" type="text" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none transition">
                     </div>
 
                     <div>
@@ -168,17 +168,7 @@
 
                     <div>
                       <label class="block mb-1 text-xs text-gray-500">Model (模型名)</label>
-                      <input v-model="formData.model" type="text" placeholder="deepseek-chat" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
-                      <p class="flex items-center gap-1 mt-1 text-[10px] text-yellow-600">
-                        <AlertTriangle class="flex-shrink-0 w-3 h-3" />
-                        模型名称以供应商实际提供的为准，可能与官方命名不同
-                      </p>
-                      <p class="text-[10px] text-gray-500 mt-1">
-                        常用:
-                        <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='deepseek-chat'">deepseek-chat</span>,
-                        <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='gpt-4o'">gpt-4o</span>,
-                        <span class="text-gray-300 cursor-pointer hover:text-blue-400" @click="formData.model='claude-sonnet-4-20250514'">claude-sonnet-4</span>
-                      </p>
+                      <input v-model="formData.model" type="text" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
                     </div>
                   </div>
                 </section>
@@ -191,7 +181,7 @@
                   <div class="space-y-4">
                     <div>
                       <label class="block mb-1 text-xs text-gray-500">Base URL (API 地址)</label>
-                      <input v-model="formData.baseURL" type="text" placeholder="https://api.deepseek.com" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
+                      <input v-model="formData.baseURL" type="text" class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition">
                     </div>
 
                     <div>
@@ -432,12 +422,18 @@
               <div class="space-y-5">
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
                   <label class="block mb-2 text-sm font-medium text-gray-100">微信开发者工具路径</label>
-                  <input
-                    v-model="wechatDevtoolsConfig.path"
-                    type="text"
-                    :placeholder="serverPlatform === 'win32' ? '支持目录、cli.bat 或 微信开发者工具.exe' : '支持 .app、cli 或安装目录'"
-                    class="w-full bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
+                  <div class="flex gap-2">
+                    <input
+                      v-model="wechatDevtoolsConfig.path"
+                      type="text"
+                      :placeholder="serverPlatform === 'win32' ? '支持目录、cli.bat 或 微信开发者工具.exe' : '支持 .app、cli 或安装目录'"
+                      class="min-w-0 flex-1 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                    >
+                    <button
+                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-emerald-500 hover:text-emerald-400"
+                      @click="pickFilePath((p) => (wechatDevtoolsConfig.path = p))"
+                    >选择</button>
+                  </div>
                 </div>
 
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
@@ -456,14 +452,19 @@
                     </option>
                     <option value="custom">自定义…</option>
                   </select>
-                  <input
-                    v-if="activeTerminalConfig.preset === 'custom'"
-                    :value="activeTerminalConfig.customApp"
-                    @input="updateTerminalCustomApp($event.target.value)"
-                    type="text"
-                    :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\Program Files\Alacritty\alacritty.exe' : '应用名称或 .app 路径，例如 iTerm 或 /Applications/iTerm.app'"
-                    class="w-full mt-2 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
+                  <div v-if="activeTerminalConfig.preset === 'custom'" class="mt-2 flex gap-2">
+                    <input
+                      :value="activeTerminalConfig.customApp"
+                      @input="updateTerminalCustomApp($event.target.value)"
+                      type="text"
+                      :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\Program Files\Alacritty\alacritty.exe' : '应用名称或 .app 路径，例如 iTerm 或 /Applications/iTerm.app'"
+                      class="min-w-0 flex-1 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                    >
+                    <button
+                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-emerald-500 hover:text-emerald-400"
+                      @click="pickFilePath((p) => updateTerminalCustomApp(p))"
+                    >选择</button>
+                  </div>
                 </div>
 
                 <div class="p-4 border border-gray-700 rounded-lg bg-surface-raised">
@@ -477,13 +478,18 @@
                     <option value="system">系统默认</option>
                     <option value="custom">自定义…</option>
                   </select>
-                  <input
-                    v-if="editorConfig.preset === 'custom'"
-                    v-model="editorConfig.customCommand"
-                    type="text"
-                    :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\\Program Files\\Zed\\zed.exe' : '命令或 .app 路径，例如 zed 或 /Applications/Zed.app'"
-                    class="w-full mt-2 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
-                  >
+                  <div v-if="editorConfig.preset === 'custom'" class="mt-2 flex gap-2">
+                    <input
+                      v-model="editorConfig.customCommand"
+                      type="text"
+                      :placeholder="serverPlatform === 'win32' ? '可执行文件路径，例如 C:\\Program Files\\Zed\\zed.exe' : '命令或 .app 路径，例如 zed 或 /Applications/Zed.app'"
+                      class="min-w-0 flex-1 bg-surface border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-emerald-500 focus:outline-none transition"
+                    >
+                    <button
+                      class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-emerald-500 hover:text-emerald-400"
+                      @click="pickFilePath((p) => (editorConfig.customCommand = p))"
+                    >选择</button>
+                  </div>
                 </div>
 
               </div>
@@ -779,6 +785,12 @@ const updateTerminalPreset = (value) => {
 
 const updateTerminalCustomApp = (value) => {
   activeTerminalConfig.value.customApp = value;
+};
+
+const pickFilePath = (apply) => {
+  socket.emit('dialog:select-file', (result) => {
+    if (result?.success && result.path) apply(result.path);
+  });
 };
 
 // 全局默认模型名称（用于场景配置的下拉提示）
