@@ -827,6 +827,9 @@ io.on('connection', (socket) => {
     callback?.(result);
   });
 
+  socket.on('app:update:open-release', (callback) => {
+    callback(appUpdater.openReleasePage());
+  });
   socket.on('app:update:quit-install', (callback) => {
     const result = appUpdater.quitAndInstall();
     callback?.(result);

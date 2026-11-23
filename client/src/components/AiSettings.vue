@@ -619,7 +619,7 @@
                       {{ appUpdate.message || '尚未检查' }}
                     </span>
                   </div>
-                  <div v-if="appUpdate.hasUpdate" class="pt-2 border-t border-gray-700">
+                  <div v-if="appUpdate.hasUpdate && appUpdate.installSupported" class="pt-2 border-t border-gray-700">
                     <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
                       <span>下载进度</span>
                       <span>{{ Number(appUpdate.progress || 0).toFixed(0) }}%</span>
@@ -642,15 +642,23 @@
                     :disabled="appUpdate.checking || !appUpdate.enabled"
                     class="px-4 py-2 text-xs font-bold text-white rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
                   >
-                    {{ appUpdate.checking ? '检查中...' : '检查并下载更新' }}
+                    {{ appUpdate.checking ? '检查中...' : (appUpdate.installSupported ? '检查并下载更新' : '检查更新') }}
                   </button>
 
                   <button
+                    v-if="appUpdate.installSupported"
                     @click="installUpdateNow"
                     :disabled="!appUpdate.downloaded"
                     class="px-4 py-2 text-xs font-bold text-white rounded bg-green-600 hover:bg-green-500 disabled:opacity-50"
                   >
                     立即重启并安装
+                  </button>
+                  <button
+                    v-else-if="appUpdate.hasUpdate"
+                    @click="openReleasePage"
+                    class="px-4 py-2 text-xs font-bold text-white rounded bg-green-600 hover:bg-green-500"
+                  >
+                    打开下载页
                   </button>
                 </div>
 
@@ -712,6 +720,7 @@ const appUpdate = ref({
   currentVersion: '',
   supported: false,
   enabled: false,
+  installSupported: true,
   checking: false,
   hasUpdate: false,
   downloaded: false,
@@ -954,6 +963,15 @@ const checkAppUpdate = () => {
       return;
     }
     if (result?.state) applyAppUpdateState(result.state);
+  });
+};
+
+const openReleasePage = () => {
+  socket.emit('app:update:open-release', (result) => {
+    if (!result?.success) {
+      $toast.error(result?.error || '打开下载页失败');
+      return;
+    }
   });
 };
 

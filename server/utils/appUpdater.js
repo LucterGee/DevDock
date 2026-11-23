@@ -29,6 +29,7 @@ const state = {
   currentVersion: String(ROOT_PACKAGE?.version || '0.0.0'),
   supported: false,
   enabled: false,
+  installSupported: false,
   checking: false,
   hasUpdate: false,
   downloaded: false,
@@ -42,6 +43,20 @@ const state = {
 };
 
 const cloneState = () => ({ ...state });
+
+// macOS 的 Squirrel.Mac 在安装前会校验新包签名，未签名或 ad-hoc 签名
+// 必然失败（designated requirement 是当前二进制的 cdhash，新版本对不上）。
+// 这里通过 bundle 是否带签名清单判断能否在本机安装。
+const isBundleSigned = (electronAppInstance) => {
+  if (process.platform !== 'darwin') return true;
+  try {
+    const exe = electronAppInstance.getPath('exe');
+    const contentsDir = path.dirname(path.dirname(exe));
+    return fs.existsSync(path.join(contentsDir, '_CodeSignature', 'CodeResources'));
+  } catch (e) {
+    return false;
+  }
+};
 
 const emitState = () => {
   emitter.emit('state', cloneState());
@@ -95,8 +110,11 @@ const setup = () => {
     return cloneState();
   }
 
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  state.installSupported = isBundleSigned(electronApp);
+
+  // 无法安装时只检查不下载，避免白等一个大文件
+  autoUpdater.autoDownload = state.installSupported;
+  autoUpdater.autoInstallOnAppQuit = state.installSupported;
 
   autoUpdater.on('checking-for-update', () => {
     updateState({
@@ -116,9 +134,9 @@ const setup = () => {
       latestVersion: String(info?.version || ''),
       releaseName: String(info?.releaseName || ''),
       releaseDate: String(info?.releaseDate || ''),
-      status: 'downloading',
+      status: state.installSupported ? 'downloading' : 'manual',
       error: '',
-      message: 'Update found. Downloading...'
+      message: state.installSupported ? 'Update found. Downloading...' : '新版本需手动下载安装'
     });
   });
 
@@ -224,6 +242,29 @@ const checkForUpdates = async () => {
   }
 };
 
+// 未签名构建在 macOS 上无法自动安装，改为打开下载页手动安装
+const openReleasePage = () => {
+  if (!initialized) setup();
+
+  const publishConfig = Array.isArray(ROOT_PACKAGE?.build?.publish)
+    ? ROOT_PACKAGE.build.publish[0]
+    : ROOT_PACKAGE?.build?.publish;
+  const owner = publishConfig?.owner;
+  const repo = publishConfig?.repo;
+  if (!owner || !repo) {
+    return { success: false, error: '未找到发布仓库配置' };
+  }
+
+  const url = 'https://github.com/' + owner + '/' + repo + '/releases/latest';
+  try {
+    const { shell } = require('electron');
+    shell.openExternal(url);
+  } catch (e) {
+    return { success: false, error: e.message || '打开下载页失败' };
+  }
+  return { success: true, url };
+};
+
 const quitAndInstall = () => {
   if (!initialized) setup();
   if (!state.enabled || !autoUpdater) {
@@ -231,6 +272,13 @@ const quitAndInstall = () => {
       success: false,
       state: cloneState(),
       error: state.message || 'Auto update is unavailable.'
+    };
+  }
+  if (!state.installSupported) {
+    return {
+      success: false,
+      state: cloneState(),
+      error: '当前构建未签名，无法自动安装，请使用下载页手动安装。'
     };
   }
   if (!state.downloaded) {
@@ -264,6 +312,7 @@ module.exports = {
   getState,
   checkForUpdates,
   quitAndInstall,
+  openReleasePage,
   onState,
   offState
 };
