@@ -44,6 +44,11 @@ const loadRepositories = async () => {
   history.value = await emitRequest<HistoryReport[]>('weekly-report:history:list')
 }
 
+const selectRootPath = () => {
+  socket.emit('dialog:select-directory', (result: any) => {
+    if (result?.success && result.path) rootPath.value = result.path
+  })
+}
 const importRoot = async () => {
   if (!rootPath.value.trim()) return
   try {
@@ -206,6 +211,7 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
           <h2 class="mb-3 text-sm font-semibold">Git 仓库</h2>
           <div class="mb-3 flex gap-2">
             <input v-model="rootPath" class="min-w-0 flex-1 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100" placeholder="扫描根目录" @keyup.enter="importRoot" />
+            <button class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400" @click="selectRootPath">选择</button>
             <button class="rounded bg-blue-600 px-3 text-xs font-medium text-white transition hover:bg-blue-500" @click="importRoot">导入</button>
           </div>
           <div class="max-h-64 overflow-y-auto">

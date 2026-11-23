@@ -881,6 +881,49 @@ io.on('connection', (socket) => {
     callback?.(result);
   });
 // 1. 弹窗选择文件夹
+  // 仅返回所选目录，不触发项目扫描等副作用
+  socket.on('dialog:select-directory', async (callback) => {
+    const respond = (payload) => {
+      if (typeof callback === 'function') callback(payload);
+    };
+
+    const electronResult = await openFolderDialogByElectron();
+    if (electronResult.supported) {
+      const selectedPath = normalizeSelectedFolderPath(electronResult.selectedPath);
+      respond({ success: Boolean(selectedPath), path: selectedPath || '' });
+      return;
+    }
+
+    if (process.platform === 'win32') {
+      const psScript = [
+        'Add-Type -Name Win32 -Namespace Native -MemberDefinition \'[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();\'',
+        '$hwnd = [Native.Win32]::GetForegroundWindow()',
+        '$shell = New-Object -ComObject Shell.Application',
+        "$folder = $shell.BrowseForFolder($hwnd, '请选择目录', 0x51, '')",
+        'if ($folder) { $folder.Self.Path }',
+      ].join('; ');
+      const encodedCommand = Buffer.from(psScript, 'utf16le').toString('base64');
+      const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodedCommand]);
+      let output = '';
+      child.stdout.on('data', (data) => { output += data.toString(); });
+      child.on('error', (error) => respond({ success: false, error: error.message }));
+      child.on('close', () => {
+        const selectedPath = normalizeSelectedFolderPath(output.trim());
+        respond({ success: Boolean(selectedPath), path: selectedPath || '' });
+      });
+      return;
+    }
+
+    const child = spawn('osascript', ['-e', 'POSIX path of (choose folder with prompt "请选择目录")']);
+    let output = '';
+    child.stdout.on('data', (data) => { output += data.toString(); });
+    child.on('error', (error) => respond({ success: false, error: error.message }));
+    child.on('close', () => {
+      const selectedPath = normalizeSelectedFolderPath(output.trim());
+      respond({ success: Boolean(selectedPath), path: selectedPath || '' });
+    });
+  });
+
   socket.on('open-folder-dialog', async () => {
     console.log('正在唤起文件夹选择弹窗...');
 
