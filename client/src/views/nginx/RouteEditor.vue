@@ -154,22 +154,26 @@ const submit = () => {
 
         <div class="border-t border-gray-700 pt-4">
           <span class="mb-2 block text-xs text-gray-400">固定头</span>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="space-y-1.5">
             <label class="flex items-center gap-2 text-xs text-gray-300">
               <input v-model="draft.headers.httpVersion" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-600 bg-surface-sunken" />
-              <span class="font-mono">proxy_http_version 1.1</span>
+              <span class="w-52 shrink-0 font-mono">proxy_http_version</span>
+              <span class="font-mono text-gray-500">1.1</span>
             </label>
             <label class="flex items-center gap-2 text-xs text-gray-300">
               <input v-model="draft.headers.host" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-600 bg-surface-sunken" />
-              <span class="font-mono">Host</span>
+              <span class="w-52 shrink-0 font-mono">proxy_set_header Host</span>
+              <span class="font-mono text-gray-500">$host</span>
             </label>
             <label class="flex items-center gap-2 text-xs text-gray-300">
               <input v-model="draft.headers.upgrade" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-600 bg-surface-sunken" />
-              <span class="font-mono">Upgrade</span>
+              <span class="w-52 shrink-0 font-mono">proxy_set_header Upgrade</span>
+              <span class="font-mono text-gray-500">$http_upgrade</span>
             </label>
             <label class="flex items-center gap-2 text-xs text-gray-300">
               <input v-model="draft.headers.connection" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-600 bg-surface-sunken" />
-              <span class="font-mono">Connection</span>
+              <span class="w-52 shrink-0 font-mono">proxy_set_header Connection</span>
+              <span class="font-mono text-gray-500">"upgrade"</span>
             </label>
           </div>
         </div>
