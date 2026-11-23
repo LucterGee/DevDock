@@ -166,23 +166,8 @@ function createTray() {
   tray = new Tray(trayImage);
   tray.setToolTip('DevDock');
 
-  const trayMenu = Menu.buildFromTemplate([
-    { label: '显示窗口', click: showMainWindow },
-    { label: '隐藏窗口', click: hideMainWindow },
-    { type: 'separator' },
-    {
-      label: '退出',
-      click: requestQuitApp
-    }
-  ]);
-
-  tray.setContextMenu(trayMenu);
   tray.on('click', () => {
-    if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) {
-      showMainWindow();
-      return;
-    }
-    hideMainWindow();
+    showMainWindow();
   });
 }
 

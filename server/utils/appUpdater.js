@@ -243,19 +243,41 @@ const checkForUpdates = async () => {
 };
 
 // 未签名构建在 macOS 上无法自动安装，改为打开下载页手动安装
-const openReleasePage = () => {
-  if (!initialized) setup();
+// 打包后 electron-builder 会裁掉 package.json 的 build 字段，
+// 发布仓库信息改从 Resources/app-update.yml 读取
+const resolvePublishTarget = () => {
+  const ymlPath = process.resourcesPath
+    ? path.join(process.resourcesPath, 'app-update.yml')
+    : '';
+  if (ymlPath && fs.existsSync(ymlPath)) {
+    try {
+      const text = fs.readFileSync(ymlPath, 'utf-8');
+      const owner = (text.match(/^owner:\s*(.+)$/m) || [])[1];
+      const repo = (text.match(/^repo:\s*(.+)$/m) || [])[1];
+      if (owner && repo) return { owner: owner.trim(), repo: repo.trim() };
+    } catch (e) {
+      // 读取失败则回退到 package.json
+    }
+  }
 
   const publishConfig = Array.isArray(ROOT_PACKAGE?.build?.publish)
     ? ROOT_PACKAGE.build.publish[0]
     : ROOT_PACKAGE?.build?.publish;
-  const owner = publishConfig?.owner;
-  const repo = publishConfig?.repo;
-  if (!owner || !repo) {
+  if (publishConfig?.owner && publishConfig?.repo) {
+    return { owner: publishConfig.owner, repo: publishConfig.repo };
+  }
+  return null;
+};
+
+const openReleasePage = () => {
+  if (!initialized) setup();
+
+  const target = resolvePublishTarget();
+  if (!target) {
     return { success: false, error: '未找到发布仓库配置' };
   }
 
-  const url = 'https://github.com/' + owner + '/' + repo + '/releases/latest';
+  const url = 'https://github.com/' + target.owner + '/' + target.repo + '/releases/latest';
   try {
     const { shell } = require('electron');
     shell.openExternal(url);
