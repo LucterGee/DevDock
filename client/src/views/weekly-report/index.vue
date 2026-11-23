@@ -219,7 +219,7 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
             <button class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400" @click="selectRootPath">选择</button>
             <button class="rounded bg-blue-600 px-3 text-xs font-medium text-white transition hover:bg-blue-500" @click="importRoot">导入</button>
           </div>
-          <div class="max-h-64 overflow-y-auto">
+          <div class="max-h-64 overflow-y-auto overscroll-contain">
             <div v-for="repository in repositories" :key="repository.id" class="flex items-center gap-2 border-t border-gray-700 py-1.5 text-sm">
               <input type="checkbox" class="shrink-0" :checked="repository.enabled" @change="toggleRepository(repository)" />
               <span class="min-w-0 flex-1 truncate" :title="repository.path">{{ repository.name }}</span>
@@ -303,7 +303,7 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
               <button class="rounded bg-gray-700 px-3 py-1 text-xs text-gray-100 transition hover:bg-gray-600" @click="saveReport">保存历史</button>
             </div>
           </div>
-          <textarea v-model="reportMarkdown" class="min-h-[360px] w-full rounded border border-gray-600 bg-gray-900 p-3 font-mono text-sm text-gray-100" placeholder="生成后可直接编辑…" />
+          <textarea v-model="reportMarkdown" class="min-h-[360px] w-full overscroll-contain rounded border border-gray-600 bg-gray-900 p-3 font-mono text-sm text-gray-100" placeholder="生成后可直接编辑…" />
         </section>
       </section>
     </main>

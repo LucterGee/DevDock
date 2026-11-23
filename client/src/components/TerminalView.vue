@@ -619,7 +619,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- 内容区 -->
-      <div class="flex-1 p-4 overflow-y-auto prose-sm prose text-left custom-markdown prose-invert max-w-none">
+      <div class="flex-1 p-4 overflow-y-auto overscroll-contain prose-sm prose text-left custom-markdown prose-invert max-w-none">
         <!-- 诊断中 -->
         <div v-if="isAnalyzing" class="flex flex-col items-center justify-center h-full space-y-2 text-gray-400">
           <div class="w-6 h-6 border-2 border-purple-500 rounded-full border-t-transparent animate-spin"></div>
