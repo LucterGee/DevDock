@@ -143,6 +143,10 @@
                 </h4>
               </div>
 
+              <div v-if="!secretStorageAvailable" class="mx-6 mt-4 flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                <AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>当前环境不支持加密存储，已清空磁盘上的 API Key。本次填写的密钥只保留在内存中，重启应用后需要重新输入。</span>
+              </div>
               <div class="px-6 py-5 space-y-6">
 
                 <!-- 分区：基础信息 -->
@@ -698,6 +702,7 @@ import { useTheme } from '../utils/useTheme';
 import { socket } from '../utils/socket';
 
 const props = defineProps({ visible: Boolean });
+const secretStorageAvailable = ref(true);
 const emit = defineEmits(['close']);
 
 const backdrop = ref(null);
@@ -1028,6 +1033,9 @@ onMounted(() => {
   socket.on('tunnel:state', handleTunnelState);
   socket.on('app:update:state', applyAppUpdateState);
   socket.emit('tunnel:get-state', handleTunnelState);
+  socket.emit('ai:secret-storage', (result) => {
+    secretStorageAvailable.value = result ? result.available !== false : true;
+  });
   socket.emit('app:update:get-state', applyAppUpdateState);
   loadTerminalPresets();
 });

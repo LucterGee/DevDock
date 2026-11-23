@@ -139,3 +139,10 @@ html.theme-light .shadow-2xl {
 ::-webkit-scrollbar-corner {
   background: var(--color-surface-sunken);
 }
+
+/* 鼠标点击后残留的焦点环去掉；键盘导航仍保留 focus-visible 提示 */
+button:focus:not(:focus-visible),
+[role='button']:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}

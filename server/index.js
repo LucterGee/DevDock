@@ -13,6 +13,8 @@ const nodeVersions = require('./utils/nodeVersions');
 const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveConfigPath } = require('./utils/appPaths');
+const { isAvailable: isSecretStorageAvailable } = require('./utils/secretStore');
+const { openAiConfigList, sealAiConfigList, migratePlaintextSecrets } = require('./utils/aiSecrets');
 const { resolveCommandExecution } = require('./utils/commandExecution');
 const {
   TERMINAL_CONFIG_KEY,
@@ -39,6 +41,7 @@ const {
 } = require('./utils/editors');
 
 // 配置文件存在用户目录下，防止误删
+const AI_CONFIG_LIST_KEY = 'ai_config_list';
 const CONFIG_PATH = resolveConfigPath('config.json', '.devdock-config.json');
 const WEEKLY_REPORT_STATE_PATH = resolveConfigPath('weekly-report.json', '.devdock-weekly-report.json');
 const WEEKLY_REPORT_CACHE_PATH = resolveConfigPath('weekly-report-cache.json', '.devdock-weekly-report-cache.json');
@@ -124,6 +127,23 @@ const writeConfigFile = (data) => {
   } catch (e) {
     console.error('写入配置失败', e);
   }
+};
+// 启动时把历史明文 API Key 加密；加密不可用则保持原样（读取时视为空）
+let aiSecretsMigrated = false;
+// 首次读取时再迁移：safeStorage 在 app ready 之前不可用
+const ensureAiSecretsMigrated = (allData) => {
+  if (aiSecretsMigrated) return allData;
+  aiSecretsMigrated = true;
+  try {
+    const result = migratePlaintextSecrets(allData[AI_CONFIG_LIST_KEY]);
+    if (!result.changed) return allData;
+    allData[AI_CONFIG_LIST_KEY] = result.list;
+    writeConfigFile(allData);
+    console.log('[secret] 已加密历史明文 API Key');
+  } catch (error) {
+    console.error('[secret] 迁移失败:', error.message);
+  }
+  return allData;
 };
 
 const readWechatDevtoolsConfig = () => {
@@ -1658,6 +1678,9 @@ if ($folder) { $folder.Self.Path }
     })();
   });
 
+  socket.on('ai:secret-storage', (callback) => {
+    callback({ available: isSecretStorageAvailable() });
+  });
   socket.on('config:load', (key, callback) => {
     const allData = readConfigFile();
     let value = allData[key] || null; // 取出对应 key 的值
@@ -1665,6 +1688,8 @@ if ($folder) { $folder.Self.Path }
       value = normalizeWechatDevtoolsConfig(value);
     } else if (key === TERMINAL_CONFIG_KEY) {
       value = normalizeTerminalConfig(value);
+    } else if (key === AI_CONFIG_LIST_KEY) {
+      value = openAiConfigList(ensureAiSecretsMigrated(allData)[AI_CONFIG_LIST_KEY]);
     }
     console.log(`📖 读取配置 [${key}]`);
     callback(value); // ✅ 发回前端
@@ -1678,6 +1703,8 @@ if ($folder) { $folder.Self.Path }
       normalizedValue = normalizeWechatDevtoolsConfig(value);
     } else if (key === TERMINAL_CONFIG_KEY) {
       normalizedValue = normalizeTerminalConfig(value);
+    } else if (key === AI_CONFIG_LIST_KEY) {
+      normalizedValue = sealAiConfigList(value, allData[AI_CONFIG_LIST_KEY]);
     }
     allData[key] = normalizedValue; // 更新对应的 key
     writeConfigFile(allData); // 写入硬盘
@@ -1731,7 +1758,7 @@ if ($folder) { $folder.Self.Path }
     weeklyCallback(callback, () => buildReportContext(activity, limits)));
   socket.on('weekly-report:generate', ({ context, systemPrompt, configId } = {}, callback) => weeklyCallback(callback, async () => {
     const allConfig = readConfigFile();
-    const configList = allConfig.ai_config_list || [];
+    const configList = openAiConfigList(allConfig.ai_config_list || []);
     const sceneId = configId || allConfig.ai_scene_configs?.weeklyReport || allConfig.ai_active_id || '';
     const config = configList.find((item) => item.id === sceneId) || configList[0];
     return generateText({
@@ -1800,7 +1827,7 @@ if ($folder) { $folder.Self.Path }
   socket.on('proxy:claude', async ({ message, systemPrompt, configId }, callback) => {
     // 从配置文件读取 AI 配置，支持场景级指定
     const allConfig = readConfigFile();
-    const configList = allConfig['ai_config_list'] || [];
+    const configList = openAiConfigList(allConfig['ai_config_list'] || []);
     const targetId = configId || allConfig['ai_active_id'] || '';
     const aiConfig = configList.find(c => c.id === targetId) || configList[0];
 
