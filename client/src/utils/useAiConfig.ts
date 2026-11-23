@@ -31,6 +31,7 @@ const activeId = ref('default');
 const sceneConfigs = ref<Record<string, string>>({ git: '', diagnosis: '', weeklyReport: '' });
 const tunnelConfig = ref({
   token: '',
+  gatewayPort: 26324,
   publicDomain: '',
   autoSwitchOnRun: false,
   projectPorts: {},
@@ -93,6 +94,7 @@ const init = () => {
     if (data && typeof data === 'object') {
       tunnelConfig.value = {
         token: typeof data.token === 'string' ? data.token : '',
+        gatewayPort: Number.isInteger(data.gatewayPort) ? data.gatewayPort : 26324,
         publicDomain: typeof data.publicDomain === 'string' ? data.publicDomain : '',
         autoSwitchOnRun: data.autoSwitchOnRun !== false,
         projectPorts: data.projectPorts && typeof data.projectPorts === 'object' ? data.projectPorts : {},

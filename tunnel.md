@@ -16,7 +16,7 @@
 
 - `Public Hostname`：填写你要对外访问的域名（如 `dev.example.com`）
 - `Service Type`：`HTTP`
-- `URL`：`http://127.0.0.1:26324`（DevDock 内置 Tunnel 网关）
+- `URL`：`http://127.0.0.1:26324`（DevDock 内置 Tunnel 网关，端口可在设置中修改，改后 Cloudflare 后台的 URL 要同步调整）
 
 控制台路径参考（Cloudflare 后台）：
 
@@ -66,7 +66,7 @@
 
 ## 6. 相关说明
 
-- 内置 Tunnel 网关地址：`127.0.0.1:26324`
+- 内置 Tunnel 网关地址：`127.0.0.1:26324`，默认端口 26324，可在设置 → Tunnel 的「Gateway 端口」中修改；端口被占用时网关会提示具体端口号，改端口后记得同步修改 Cloudflare 后台的公共主机名映射
 - 配置存储于：`~/.devdock/config.json` 的 `ai_tunnel_config` 字段
 
 ## 7. 热更新注意事项（Vite / Webpack）

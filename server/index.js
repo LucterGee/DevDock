@@ -81,14 +81,20 @@ appUpdater.onState((payload) => {
 const processes = new Map();
 const commandProcesses = new Map();
 const TUNNEL_CONFIG_KEY = 'ai_tunnel_config';
-const TUNNEL_GATEWAY_PORT = 26324;
+const DEFAULT_TUNNEL_GATEWAY_PORT = 26324;
+// 网关端口可配置：Cloudflare 后台的公共主机名需要指向这个端口
+const normalizeGatewayPort = (value) => {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) return DEFAULT_TUNNEL_GATEWAY_PORT;
+  return port;
+};
 const DEFAULT_TUNNEL_HOST = '127.0.0.1';
 
 let tunnelGatewayServer = null;
 let cloudflaredProcess = null;
 let pendingCloudflaredAutoStartProjectPath = '';
 const tunnelGatewayState = {
-  port: TUNNEL_GATEWAY_PORT,
+  port: DEFAULT_TUNNEL_GATEWAY_PORT,
   running: false,
   lastError: '',
   activeTarget: null
@@ -193,6 +199,7 @@ const normalizeTunnelConfig = (rawConfig) => {
       : {};
 
   return {
+    gatewayPort: normalizeGatewayPort(source.gatewayPort),
     token: typeof source.token === 'string' ? source.token : '',
     publicDomain: typeof source.publicDomain === 'string' ? source.publicDomain : '',
     autoSwitchOnRun: source.autoSwitchOnRun !== false,
@@ -208,8 +215,18 @@ const readTunnelConfig = () => {
 
 const writeTunnelConfig = (nextConfig) => {
   const allConfig = readConfigFile();
-  allConfig[TUNNEL_CONFIG_KEY] = normalizeTunnelConfig(nextConfig);
+  const normalized = normalizeTunnelConfig(nextConfig);
+  allConfig[TUNNEL_CONFIG_KEY] = normalized;
   writeConfigFile(allConfig);
+  restartTunnelGatewayIfPortChanged(normalized.gatewayPort);
+};
+
+// 端口变化后重启网关使其生效
+const restartTunnelGatewayIfPortChanged = (nextPort) => {
+  if (!tunnelGatewayServer) return;
+  if (normalizeGatewayPort(nextPort) === tunnelGatewayState.port) return;
+  stopTunnelGatewayServer();
+  setTimeout(() => startTunnelGatewayServer(), 200);
 };
 
 const getTunnelStatePayload = () => ({
@@ -312,7 +329,7 @@ const extractRuntimePortFromOutput = (output) => {
     /\bNetwork:\s*https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|[a-z0-9.-]+):(\d{2,5})/i
   ]);
   if (!isValidPort(candidate)) return null;
-  if (Number(candidate) === TUNNEL_GATEWAY_PORT) return null;
+  if (Number(candidate) === tunnelGatewayState.port) return null;
   return Number(candidate);
 };
 
@@ -619,12 +636,16 @@ const proxyGatewayUpgradeRequest = (req, socket, head) => {
 const startTunnelGatewayServer = () => {
   if (tunnelGatewayServer) return;
 
+  tunnelGatewayState.port = normalizeGatewayPort(readTunnelConfig().gatewayPort);
+
   tunnelGatewayServer = http.createServer(proxyGatewayHttpRequest);
   tunnelGatewayServer.on('upgrade', proxyGatewayUpgradeRequest);
   tunnelGatewayServer.on('error', (error) => {
     tunnelGatewayState.running = false;
-    tunnelGatewayState.lastError = error.message;
-    console.error('[TunnelGateway] error:', error.message);
+    tunnelGatewayState.lastError = error.code === 'EADDRINUSE'
+      ? `端口 ${tunnelGatewayState.port} 已被占用，请在设置中修改 Tunnel 网关端口`
+      : error.message;
+    console.error('[TunnelGateway] error:', tunnelGatewayState.lastError);
     broadcastTunnelState();
   });
 
@@ -1706,9 +1727,12 @@ if ($folder) { $folder.Self.Path }
       normalizedValue = normalizeTerminalConfig(value);
     } else if (key === AI_CONFIG_LIST_KEY) {
       normalizedValue = sealAiConfigList(value, allData[AI_CONFIG_LIST_KEY]);
+    } else if (key === TUNNEL_CONFIG_KEY) {
+      normalizedValue = normalizeTunnelConfig(value);
     }
     allData[key] = normalizedValue; // 更新对应的 key
     writeConfigFile(allData); // 写入硬盘
+    if (key === TUNNEL_CONFIG_KEY) restartTunnelGatewayIfPortChanged(normalizedValue.gatewayPort);
     console.log(`💾 保存配置 [${key}] Success`);
   });
 

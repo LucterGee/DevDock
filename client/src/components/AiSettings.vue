@@ -349,7 +349,7 @@
                   <input
                     v-model="tunnelConfig.token"
                     type="password"
-                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-cyan-500 focus:outline-none transition"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition"
                     placeholder="Paste cloudflared tunnel run token"
                   >
                 </div>
@@ -359,8 +359,20 @@
                   <input
                     v-model="tunnelConfig.publicDomain"
                     type="text"
-                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-cyan-500 focus:outline-none transition"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition"
                     placeholder="e.g. https://dev.example.com"
+                  >
+                </div>
+
+                <div>
+                  <label class="block mb-1 text-xs text-gray-500">Gateway 端口</label>
+                  <input
+                    v-model.number="tunnelConfig.gatewayPort"
+                    type="number"
+                    min="1024"
+                    max="65535"
+                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition"
+                    placeholder="26324"
                   >
                 </div>
 
