@@ -11,7 +11,7 @@
   <a href="https://github.com/LucterGee/DevDock/actions">
     <img src="https://img.shields.io/github/actions/workflow/status/LucterGee/DevDock/build.yml?label=Build&style=flat-square" alt="Build Status">
   </a>
-  <img src="https://img.shields.io/badge/Electron-v33.0-blue?style=flat-square&logo=electron" alt="Electron Version">
+  <img src="https://img.shields.io/badge/Electron-v42.0-blue?style=flat-square&logo=electron" alt="Electron Version">
   <img src="https://img.shields.io/badge/Node-v22.x-green?style=flat-square&logo=node.js" alt="Node Version">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/github/license/LucterGee/DevDock?style=flat-square" alt="License">
@@ -25,7 +25,7 @@
 
 ## 项目简介
 
-**DevDock** 是一个面向前端开发者的桌面端项目管理工具。当你同时维护十几个甚至几十个本地项目时，DevDock 让你告别在文件夹和终端之间反复跳转的痛苦——一个界面统一管理项目脚本启动、临时命令执行、监控、日志查看、Git 提交和 Node 版本切换。
+**DevDock** 是一个面向前端开发者的桌面端项目管理工具。当你同时维护十几个甚至几十个本地项目时，DevDock 让你告别在文件夹和终端之间反复跳转的痛苦——一个界面统一管理项目脚本启动、临时命令执行、监控、日志查看、Git 提交、Node 版本切换，以及 Nginx 路由管理与工作汇报生成。
 
 <div align="center">
 <img src="./client/public/example.png" width="100%" alt="DevDock 界面预览">
@@ -66,12 +66,15 @@
 
 ### 🤖 AI 智能辅助
 
-集成多模型 AI 能力，提供两个核心场景：
+集成多模型 AI 能力，覆盖三个场景：
 
 - **AI Git 提交**：点击项目卡片的 Git 按钮，自动获取 `git diff`，由 AI 生成符合 Angular 规范的中文 Commit Message，确认后一键提交。
-- **日志智能诊断**：终端出现错误时，一键将日志上下文发送给 AI 分析，返回错误原因和修复建议（Markdown 渲染展示）。
+- **日志智能诊断**：终端出现错误时，一键将日志上下文发送给 AI 分析，返回错误原因和修复建议（Markdown 渲染展示），并可继续让 AI 给出修复步骤。
+- **工作汇报**：把采集到的 Git 活动交给 AI 生成中文 Markdown 周报。
 
-支持 **OpenAI 兼容协议**（GPT / DeepSeek / Codex 等）、**Anthropic**（Claude）、**Google Gemini** 三种 API 协议，可配置多个模型并随时切换。API Key 仅存储在本地配置文件中，通过后端代理转发请求。
+支持 **OpenAI 兼容协议**（GPT / DeepSeek / Codex 等）、**Anthropic**（Claude）、**Google Gemini** 三种 API 协议，可配置多个模型并随时切换，也可为诊断、Git 提交、周报分别指定模型。
+
+API Key 经 Electron `safeStorage` 加密后写入配置（macOS 走 Keychain，Windows 走 DPAPI），文件中只保留密文，请求由后端代理转发。加密不可用的环境下（如纯 Node 调试）密钥不会落盘，本次填写的密钥仅保留在内存中，设置页会给出提示。
 
 ### 🔄 Node 版本自动切换
 
@@ -87,7 +90,7 @@
 
 支持 **nvm-windows**（Windows）和 **nvm**（macOS/Linux）两种 nvm 实现。
 
-### 内置 Node 版本管理
+### 📦 内置 Node 版本管理
 
 没有安装 nvm 也可以直接下载并切换 Node 版本，下载的版本存放在 `~/.devdock/node/`，与 nvm 的版本目录合并展示，不需要关心版本装在哪里。
 
@@ -96,19 +99,13 @@
 - 安装包从 npmmirror 下载，失败时回退官方源 nodejs.org
 - 切换机制与 nvm 版本完全一致，同样通过改写子进程 PATH 实现
 
-版本标签颜色含义：
-- 🟢 绿色 — 自动检测匹配
-- 🟣 紫色 — 手动指定版本
-- ⚪ 灰色 — 使用系统默认
+### 📱 微信开发者工具
 
-### 📱 小程序标签与微信开发者工具
+扫描时检查项目根目录是否存在 `project.config.json`，命中的项目自动标记为小程序，卡片上显示 `微信工具` 按钮，点击直接启动微信开发者工具本体。
 
-如果某个项目需要用微信开发者工具打开，可以直接在项目卡片上手动标记为“小程序”，随后会显示 `微信工具` 按钮。
-
-- 是否为小程序完全由手动标签决定，首版不做自动识别
-- 只要当前平台已在设置中配置微信开发者工具路径，即可直接启动微信开发者工具本体
-- Windows 与 macOS 分别保存独立路径
-- 当前扫描逻辑仍以 `package.json` 为准，因此没有 `package.json` 的纯原生小程序目录不会出现在列表里
+- 需先在设置 → 开发工具中配置微信开发者工具路径，按钮才可用
+- 路径支持目录、`cli` 或 `.app`，可点击「选择」从文件选择器中挑选
+- 扫描仍以 `package.json` 为准，因此没有 `package.json` 的纯原生小程序目录不会出现在列表里
 
 ### 🌐 Tunnel 公网访问（Cloudflare）
 
@@ -118,6 +115,37 @@
 - 支持配置 `cloudflared` Token 和公网域名
 - 支持一键切换内网穿透目标服务 “运行脚本时自动切换隧道目标项目”
 - 项目卡片内可直接显示并点击 `Tunnel URL`（仅在 cloudflared 运行时显示）
+
+### 🔀 Nginx 路由管理
+
+内置 nginx 二进制，反向代理路由可以在界面里维护，不用手写配置文件。
+
+- 路由列表支持搜索，每条路由可配置多个转发目标并随时切换
+- 支持变量（如 `${api_host}`），生成配置时统一替换
+- 固定头（`proxy_http_version` / `Host` / `Upgrade` / `Connection`）可勾选，界面直接显示写入的完整指令
+- 支持校验配置、重载、启动、停止，监听端口可在设置中调整
+- 路由以自有 JSON 格式导入导出，便于备份和迁移
+- 生成的路由文件带固定标记，能识别出手工改动过的文件
+
+### 🖥️ 外部工具集成
+
+项目卡片提供三种打开方式，具体程序都能在设置中指定：
+
+- **在终端中打开**：内置 Terminal.app / iTerm2 / Warp / Ghostty / WezTerm / kitty / Alacritty，也可填写自定义应用
+- **在编辑器中打开**：内置 VS Code 与系统默认，也可填写命令或 `.app` 路径
+- **在资源管理器中打开**：直接定位到项目目录
+
+### 📝 工作汇报
+
+内置周报生成工具，入口在项目页右上角，页面地址为 `#/weekly-report`。
+
+- 导入 Git 仓库，勾选需要精确匹配的作者名
+- 日期范围提供快捷区间：今天 / 近24小时 / 近3天 / 近7天 / 近15天 / 近30天，只改日期不触发采集
+- 采集后逐条审核要纳入的提交，再生成可继续编辑的 Markdown 周报
+- 默认只采集提交元数据和文件变更统计，不读取源码差异；只有明确请求提交详情时才读取经过长度限制的 patch
+- 发送给模型前会对上下文做路径脱敏和长度限制
+
+周报可使用 DeepSeek（OpenAI 兼容接口）、Gemini（原生 `generateContent` 接口）或 OpenAI Responses API，在 AI 设置中为周报场景单独选择模型即可。
 
 
 ---
@@ -146,6 +174,8 @@
 │   │              │   │  Git 操作         │  │
 │   │              │   │  AI 代理          │  │
 │   │              │   │  Node 版本管理    │  │
+│   │              │   │  Nginx 路由       │  │
+│   │              │   │  工作汇报         │  │
 │   └──────────────┘   └──────────────────┘  │
 │         ▲                    ▲              │
 │         └────── Socket.io ───┘              │
@@ -196,35 +226,46 @@ npm run dist
 ### 发布新版本
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+# 1. 更新 package.json 中的 version
+# 2. 提交版本变更
+git commit -am "chore: 发布 x.y.z"
+# 3. 打标签并推送
+git tag -a vx.y.z -m "DevDock x.y.z"
+git push origin main
+git push origin vx.y.z
 ```
 
-推送 `v*` 标签后 GitHub Actions 会自动构建 Windows + macOS 安装包并上传到 Releases。
+只有推送 `v*` 标签才会触发构建，推送到 main 不会。GitHub Actions 会自动构建 Windows + macOS 安装包并上传到 Releases。
 
 ---
 
 ## 配置文件
 
-用户配置持久化存储在 `~/.devdock/config.json`，包含：
+所有数据集中存放在 `~/.devdock/` 目录：
 
-- `ai_config_list` — AI 模型配置列表
+```
+~/.devdock/
+├── config.json               主配置
+├── nginx.json                nginx 路由与设置
+├── weekly-report.json        周报配置与历史
+├── weekly-report-cache.json  周报活动缓存
+└── node/                     应用内安装的 Node 版本
+```
+
+`config.json` 包含：
+
+- `ai_config_list` — AI 模型配置列表（API Key 加密存储）
 - `ai_active_id` — 当前激活的 AI 模型
+- `ai_scene_configs` — 诊断 / Git 提交 / 周报各自的模型
 - `ai_tunnel_config` — Tunnel 配置（Token、域名、自动切换、目标项目等）
 - `node_version_overrides` — 项目级 Node 版本手动覆盖
-- `wechat_devtools_config` — 微信开发者工具路径配置（按平台保存）
-- `project_tags_by_path` — 项目标签配置（当前用于手动标记小程序）
+- `wechat_devtools_config` — 微信开发者工具路径
+- `terminal_config` — 终端程序配置
+- `editor_config` — 编辑器配置
 
 ---
 
-Thanks to [linux社区](linux.do) — 前端终端集成效能工具
-## 周报功能
-
-周报页面地址为 `#/weekly-report`。支持导入 Git 仓库、选择需要精确匹配的 Git 作者名、按日期范围采集提交、审核本次纳入的提交，以及生成可继续编辑的 Markdown 周报。
-
-周报配置与历史记录保存在本地的 `~/.devdock/weekly-report.json`，活动缓存保存在 `~/.devdock/weekly-report-cache.json`。默认只采集 Git 提交元数据和文件变更统计，不读取源代码差异；只有明确请求提交详情时才会读取经过长度限制的 patch。
-
-在 AI 设置中为周报场景选择模型后，可以使用 DeepSeek（OpenAI 兼容接口）、Gemini（原生 `generateContent` 接口）或 OpenAI Responses API。发送给模型前，系统会对周报上下文进行路径脱敏和长度限制。
+## 工作汇报 MCP Server
 
 独立 MCP Server 使用 `packages/weekly-report-mcp/config.example.json` 的副本作为配置文件，启动命令如下：
 
@@ -233,3 +274,7 @@ node packages/weekly-report-mcp/index.js
 ```
 
 在 MCP 客户端中，通过环境变量 `DEVMASTER_WEEKLY_REPORT_CONFIG` 指定配置文件路径。Codex 可以使用 `skills/weekly-report/SKILL.md`，Gemini 客户端可以使用 `skills/weekly-report/gemini.md`。MCP 提供的工具均为只读操作，并会拒绝访问配置白名单以外的仓库。
+
+---
+
+Thanks to [linux社区](linux.do) — 前端终端集成效能工具

@@ -128,7 +128,7 @@
           <!-- 第二行：Node 版本 / 微信工具 / Git / KILL -->
           <div class="px-4 py-2.5 bg-surface-sunken flex flex-wrap gap-2 items-center border-b border-gray-700/50">
           <select
-            v-if="nvmDetected && installedNodeVersions.length > 0"
+            v-if="installedNodeVersions.length > 0"
             :value="p.nodeVersionOverride || (p.nodeVersionSource === 'auto' ? 'auto' : 'system')"
             @change="emit('node-version-change', p, $event.target.value)"
             class="px-2 py-1 text-[10px] font-mono bg-gray-800 border border-gray-600 rounded text-gray-300 focus:outline-none focus:border-blue-500 cursor-pointer max-w-[140px]"

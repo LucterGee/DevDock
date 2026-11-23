@@ -507,7 +507,6 @@
             <div class="flex-1 p-6 overflow-y-auto">
               <div class="pb-2 mb-5 border-b border-gray-700">
                 <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
-                  <span class="text-sm">N</span>
                   Node 版本
                 </h4>
               </div>
