@@ -472,6 +472,23 @@ const handleFix = async () => {
   }
 };
 
+// 鼠标在终端区时，滚到边界后不要把滚动传给外层容器；
+// 终端内容不足一屏时也完全拦截，避免误滚动整页
+const stopWheelChaining = (event) => {
+  const viewport = terminalContainer.value?.querySelector('.xterm-viewport');
+  if (!viewport) return;
+  const canScroll = viewport.scrollHeight > viewport.clientHeight + 1;
+  if (!canScroll) {
+    event.preventDefault();
+    return;
+  }
+  const atTop = viewport.scrollTop <= 0;
+  const atBottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 1;
+  if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
+    event.preventDefault();
+  }
+};
+
 // --- xterm 初始化 ---
 // 两套 xterm 配色：深色沿用原配色，浅色白底深字
 const xtermThemes = {
@@ -570,7 +587,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div class="p-2 h-[300px]">
+    <div class="p-2 h-[300px]" @wheel="stopWheelChaining">
       <div ref="terminalContainer" class="w-full h-full" style="text-align: left !important;"></div>
     </div>
 
@@ -676,6 +693,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 终端内部滚到顶/底时，不要带动外层容器滚动，避免误操作 */
+:deep(.xterm),
+:deep(.xterm .xterm-viewport) {
+  overscroll-behavior: contain;
+}
 .fade-in { animation: fadeIn 0.3s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
