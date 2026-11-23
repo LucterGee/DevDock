@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref, watch, nextTick, computed, onBeforeUnmount } from 'vue';
+import { isImeComposing } from '../utils/ime';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -214,6 +215,10 @@ const openAiModal = () => {
   showAiModal.value = true;
 };
 
+const submitQuestion = (event) => {
+  if (isImeComposing(event)) return;
+  handleAnalyze();
+};
 const handleAnalyze = async () => {
   const question = userQuestion.value.trim();
   const recentLogs = extractSmartLogs(props.logs.slice(logsClearOffset));
@@ -567,7 +572,7 @@ onBeforeUnmount(() => {
       <span v-if="copySuccess" class="flex items-center gap-1 px-2 py-1 text-xs text-green-400 border rounded bg-black/50 fade-in border-green-500/30"><Check class="w-3.5 h-3.5" /> 已复制</span>
       <span v-if="copyError" class="flex items-center gap-1 px-2 py-1 text-xs text-red-300 border rounded bg-black/50 fade-in border-red-500/30"><X class="w-3.5 h-3.5" /> 复制失败</span>
 
-      <input v-model="userQuestion" @keyup.enter="handleAnalyze" type="text" placeholder="向 AI 提问..."
+      <input v-model="userQuestion" @keydown.enter="submitQuestion" type="text" placeholder="向 AI 提问..."
         class="w-40 px-2 py-1 text-xs text-gray-100 placeholder-gray-500 transition border border-gray-600 rounded bg-gray-800/80 backdrop-blur-sm focus:border-purple-500 focus:outline-none focus:w-56" />
 
       <button @click="openAiModal"

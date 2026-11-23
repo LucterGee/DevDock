@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { isImeComposing } from '../../utils/ime';
 import { socket } from "../../utils/socket";
 import ProjectList from '../../components/ProjectList.vue'
 import AiSettings from '../../components/AiSettings.vue';
@@ -292,6 +293,10 @@ socket.on('folder-selected', path => {
 })
 
 // --- 动作方法 ---
+const onWorkspaceEnter = (event) => {
+  if (isImeComposing(event)) return;
+  manualScan();
+};
 const manualScan = () => {
   const normalizedPath = typeof currentPath.value === 'string' ? currentPath.value.trim() : ''
   if (normalizedPath) {
@@ -441,7 +446,7 @@ const toggleHide = (p) => {
       <div class="flex flex-1 w-full gap-2">
         <input
           v-model="currentPath"
-          @keyup.enter="manualScan"
+          @keydown.enter="onWorkspaceEnter"
           :disabled="isScanning"
           type="text"
           class="w-full px-3 py-2 font-mono text-sm text-gray-300 bg-gray-900 border border-gray-600 rounded focus:outline-none focus:border-blue-500 disabled:opacity-50"

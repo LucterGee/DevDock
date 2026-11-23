@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { isImeComposing } from '../../utils/ime';
 import { socket } from '../../utils/socket'
 import { useAiConfig } from '../../utils/useAiConfig'
 import { ChevronDown, X } from 'lucide-vue-next'
@@ -49,6 +50,10 @@ const selectRootPath = () => {
     if (result?.success && result.path) rootPath.value = result.path
   })
 }
+const onRootPathEnter = (event) => {
+  if (isImeComposing(event)) return;
+  importRoot();
+};
 const importRoot = async () => {
   if (!rootPath.value.trim()) return
   try {
@@ -210,7 +215,7 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
         <section class="rounded border border-gray-700 bg-gray-800 p-4">
           <h2 class="mb-3 text-sm font-semibold">Git 仓库</h2>
           <div class="mb-3 flex gap-2">
-            <input v-model="rootPath" class="min-w-0 flex-1 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100" placeholder="扫描根目录" @keyup.enter="importRoot" />
+            <input v-model="rootPath" class="min-w-0 flex-1 rounded border border-gray-600 bg-gray-900 px-2 py-1.5 text-xs text-gray-100" placeholder="扫描根目录" @keydown.enter="onRootPathEnter" />
             <button class="shrink-0 rounded border border-gray-600 px-3 text-xs text-gray-300 transition hover:border-blue-500 hover:text-blue-400" @click="selectRootPath">选择</button>
             <button class="rounded bg-blue-600 px-3 text-xs font-medium text-white transition hover:bg-blue-500" @click="importRoot">导入</button>
           </div>

@@ -202,9 +202,9 @@
               :value="p.commandRunning ? p.runningCommand : getCommandInput(p.path)"
               :disabled="p.commandRunning"
               @input="handleCommandInput(p.path, $event.target.value)"
-              @keydown.enter.prevent="handleRunCommand(p)"
-              @keydown.up.prevent="navigateHistory(p, -1)"
-              @keydown.down.prevent="navigateHistory(p, 1)"
+              @keydown.enter="onCommandEnter($event, p)"
+              @keydown.up="onCommandHistory($event, p, -1)"
+              @keydown.down="onCommandHistory($event, p, 1)"
               type="text"
               spellcheck="false"
               autocomplete="off"
@@ -312,6 +312,7 @@
 
 <script setup>
 import { ref, computed, nextTick } from 'vue';
+import { isImeComposing } from '../utils/ime';
 import TerminalView from './TerminalView.vue'
 import { callKuyepClaude } from '../utils/ai' // 引入通用的 AI 工具
 import { FolderOpen, Sparkles, Skull, Loader2 } from 'lucide-vue-next';
@@ -421,6 +422,18 @@ const handleCommandInput = (projectPath, value) => {
 }
 
 // ↑ 取上一条历史，↓ 取下一条；越过最新一条回到空输入
+// 输入法组合态下不提交、不切历史，避免中文输入被误触发
+const onCommandEnter = (event, project) => {
+  if (isImeComposing(event)) return;
+  event.preventDefault();
+  handleRunCommand(project);
+};
+
+const onCommandHistory = (event, project, direction) => {
+  if (isImeComposing(event)) return;
+  event.preventDefault();
+  navigateHistory(project, direction);
+};
 const navigateHistory = (project, direction) => {
   const projectPath = project.path
   const list = commandHistory.value[projectPath] || []
