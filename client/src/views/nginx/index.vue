@@ -284,9 +284,19 @@ const lineNumbers = computed(() => {
   return Array.from({ length: Math.max(count, 1) }, (_, index) => index + 1).join('\n')
 })
 
+// 去掉公共缩进，编辑器里只显示指令本身；缩进由生成时统一加
+const dedentBlock = (text: string) => {
+  const lines = String(text || '').split('\n')
+  const indents = lines
+    .filter((line) => line.trim())
+    .map((line) => (line.match(/^[ \t]*/) || [''])[0].length)
+  const common = indents.length ? Math.min(...indents) : 0
+  return common ? lines.map((line) => line.slice(common)).join('\n') : lines.join('\n')
+}
+
 const openHttpConfig = () => {
   const current = nginxSettings.value || {}
-  httpConfigDraft.value = current.customHttp || defaultHttpConfig.value
+  httpConfigDraft.value = dedentBlock(current.customHttp || defaultHttpConfig.value)
   httpConfigOpen.value = true
 }
 
