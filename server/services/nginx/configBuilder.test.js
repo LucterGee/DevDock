@@ -129,22 +129,22 @@ test('未自定义时 http 块不含任何内置内容', () => {
 });
 
 
-test('默认 http 内容为常规配置且不依赖外部文件', () => {
+test('默认 http 内容只保留必要指令，日志以注释形式给出', () => {
   const body = buildDefaultHttpBody();
-  assert.match(body, /default_type\s+application\/octet-stream;/);
-  assert.match(body, /log_format\s+main/);
-  assert.match(body, /client_max_body_size 1000M;/);
-  assert.doesNotMatch(body, /include/, '不引用 mime.types 等外部文件');
-  assert.doesNotMatch(body, /types \{/, '不内联 types 块');
+  const active = body.split('\n').filter((line) => line.trim() && !line.trim().startsWith('#'));
+
+  assert.deepEqual(active.map((line) => line.trim()), [
+    'client_max_body_size 1000M;',
+    'client_body_timeout 600s;',
+    'client_header_timeout 600s;',
+  ]);
+  assert.match(body, /# access_log\s+logs\/access\.log/);
+  assert.match(body, /# log_format\s+main/);
+  assert.doesNotMatch(body, /include/, '不引用外部文件');
 });
 
-test('访问日志开关关闭时不生成 access_log', () => {
-  const conf = buildMainConfig(baseState({ accessLog: { enabled: false, path: '/Users/demo/.devdock/nginx/logs/access.log' } }));
-  assert.doesNotMatch(conf, /access_log/);
-});
-
-test('访问日志开关打开时按相对路径写入', () => {
+test('不再生成 access_log，由用户在全局配置里自行开启', () => {
   const conf = buildMainConfig(baseState({ accessLog: { enabled: true, path: '/Users/demo/.devdock/nginx/logs/access.log' } }));
-  assert.match(conf, /access_log logs\/access\.log;/);
+  assert.doesNotMatch(conf, /^\s*access_log/m);
 });
 

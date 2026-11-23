@@ -25,19 +25,16 @@ const toConfigPath = (target, prefix) => {
 // http 块的默认内容，也是全局配置弹框的预填值
 const buildDefaultHttpBody = () =>
   [
-    '  default_type  application/octet-stream;',
-    '',
-    "  log_format  main  '$remote_addr - $remote_user [$time_local] \"$request\" '",
-    "                    '$status $body_bytes_sent \"$http_referer\" '",
-    "                    '\"$http_user_agent\" \"$http_x_forwarded_for\"';",
-    '',
-    '  sendfile        on;',
-    '',
-    '  keepalive_timeout  65;',
-    '',
+    '  # nginx 默认上限 1m，超过会被 413 拒绝，代理上传需要放开',
     '  client_max_body_size 1000M;',
     '  client_body_timeout 600s;',
     '  client_header_timeout 600s;',
+    '',
+    '  # 需要访问日志时去掉下面四行的注释',
+    "  # log_format  main  '$remote_addr - $remote_user [$time_local] \"$request\" '",
+    "  #                   '$status $body_bytes_sent \"$http_referer\" '",
+    "  #                   '\"$http_user_agent\" \"$http_x_forwarded_for\"';",
+    '  # access_log  logs/access.log  main;',
   ].join('\n');
 
 // 去掉公共缩进后再统一加两格，避免用户已有的空格被叠加
@@ -66,12 +63,6 @@ const buildMainConfig = (state) => {
   // http 块内容完全由用户决定；为空时只生成 server 块
   const httpBody = customHttp.trim() ? indentBlock(customHttp) : '';
 
-  // 访问日志开关：开启后追加一行，路径相对 prefix
-  const accessLogEnabled = Boolean(nginx.accessLog && nginx.accessLog.enabled);
-  const accessLogPath = (nginx.accessLog && nginx.accessLog.path) || path.posix.join(logDir, 'access.log');
-  const accessLogLine = accessLogEnabled
-    ? '  access_log ' + toConfigPath(accessLogPath, prefix) + ';'
-    : '';
 
   const lines = [
     '# 由 DevDock 生成，请勿手工修改；',
@@ -87,7 +78,6 @@ const buildMainConfig = (state) => {
     '',
     'http {',
     ...(httpBody ? [httpBody, ''] : []),
-    ...(accessLogLine ? [accessLogLine, ''] : []),
     '  server {',
     '    listen ' + port + ';',
     '    server_name localhost;',
