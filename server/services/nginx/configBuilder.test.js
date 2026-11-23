@@ -49,14 +49,6 @@ test('非法端口回落到默认值', () => {
   assert.equal(resolvePort({}), DEFAULT_PORT);
 });
 
-test('access_log 默认关闭，开启后写入指定路径', () => {
-  assert.match(buildMainConfig(baseState()), /access_log off;/);
-  const enabled = buildMainConfig(baseState({
-    accessLog: { enabled: true, path: '/tmp/access.log' },
-  }));
-  assert.match(enabled, /access_log \/tmp\/access\.log main;/);
-});
-
 test('pid 与 error_log 相对 prefix 解析', () => {
   const conf = buildMainConfig(baseState());
   assert.match(conf, /pid nginx\.pid;/);
@@ -78,7 +70,7 @@ test('配置头标注为自动生成', () => {
   assert.match(buildMainConfig(baseState()), /由 DevDock 生成/);
 });
 
-test('全局配置追加在默认内容之后、server 之前', () => {
+test('全局配置决定 http 块内容，位于 server 之前', () => {
   const conf = buildMainConfig(baseState({ customHttp: 'gzip on;\ngzip_types text/css;' }));
   const lines = conf.split('\n');
   const httpIndex = lines.findIndex((line) => line.trim() === 'http {');
@@ -90,7 +82,7 @@ test('全局配置追加在默认内容之后、server 之前', () => {
   assert.ok(gzipIndex > httpIndex && gzipIndex < serverIndex, 'gzip 应在 http 块内且在 server 之前');
   assert.ok(gzipTypesIndex > gzipIndex, '多行内容应逐行写入');
   assert.equal(lines[gzipIndex].trim(), 'gzip on;', '指令名不受缩进影响');
-  assert.match(conf, /client_max_body_size 1000M;/, '未覆盖的默认指令应保留');
+  assert.doesNotMatch(conf, /client_max_body_size/, '不再自动注入内置指令');
 });
 
 test('未配置全局片段时不产生多余空行', () => {
@@ -125,9 +117,14 @@ test('用户写了同名指令时以用户为准', () => {
   assert.match(hits[0], /2000M/);
 });
 
-test('未自定义时使用内置默认内容', () => {
+test('未自定义时 http 块不含任何内置内容', () => {
   const conf = buildMainConfig(baseState());
-  assert.match(conf, /client_max_body_size 1000M;/);
-  assert.doesNotMatch(conf, /gzip/);
+  const lines = conf.split('\n');
+  const httpIndex = lines.findIndex((line) => line.trim() === 'http {');
+  const serverIndex = lines.findIndex((line) => line.trim().startsWith('server {'));
+
+  assert.equal(serverIndex, httpIndex + 1, 'http 块内直接就是 server');
+  assert.doesNotMatch(conf, /client_max_body_size/);
+  assert.doesNotMatch(conf, /types \{/);
 });
 

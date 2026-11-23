@@ -67,6 +67,7 @@ const load = async () => {
   variables.value = overview.variables || []
   missingVariables.value = overview.missingVariables || []
   nginxSettings.value = (overview.state as any)?.nginx || null
+  defaultHttpConfig.value = (overview as any).defaultHttpConfig || ''
   if (!routes.value.some((route) => route.id === selectedId.value)) {
     selectedId.value = routes.value[0]?.id || ''
     addingTarget.value = false
@@ -265,12 +266,11 @@ const exportConfig = () => run(async () => {
 
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
+const defaultHttpConfig = ref('')
 const settingsDraft = ref({
   port: 18080,
   routesDir: '',
-  logDir: '',
-  accessLogEnabled: false,
-  accessLogPath: ''
+  logDir: ''
 })
 
 // --- 全局配置独立编辑层 ---
@@ -286,7 +286,7 @@ const lineNumbers = computed(() => {
 
 const openHttpConfig = () => {
   const current = nginxSettings.value || {}
-  httpConfigDraft.value = current.customHttp || ''
+  httpConfigDraft.value = current.customHttp || defaultHttpConfig.value
   httpConfigOpen.value = true
 }
 
@@ -324,8 +324,6 @@ const openSettings = () => {
     port: current.port ?? 18080,
     routesDir: toDisplayPath(current.routesDir),
     logDir: toDisplayPath(current.logDir),
-    accessLogEnabled: Boolean(current.accessLog?.enabled),
-    accessLogPath: current.accessLog?.path || ''
   }
   settingsOpen.value = true
 }
@@ -338,11 +336,6 @@ const saveSettings = () => run(async () => {
       port: Number(settingsDraft.value.port) || current.port,
       routesDir: settingsDraft.value.routesDir.trim() || current.routesDir,
       logDir: settingsDraft.value.logDir.trim() || current.logDir,
-      accessLog: {
-        ...(current.accessLog || {}),
-        enabled: settingsDraft.value.accessLogEnabled,
-        path: settingsDraft.value.accessLogPath.trim() || current.accessLog?.path || ''
-      }
     }
   })
   window.$toast?.success?.('设置已保存')
@@ -401,6 +394,9 @@ onMounted(() => run(load))
         <button class="relative flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="variablesOpen = true">
           <Braces class="h-3.5 w-3.5" />变量
           <span v-if="missingVariables.length" class="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
+        </button>
+        <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="openHttpConfig">
+          全局配置
         </button>
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="openSettings">
           <Settings class="h-3.5 w-3.5" />设置
@@ -556,14 +552,14 @@ onMounted(() => run(load))
           <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="settingsOpen = false"><X class="h-4 w-4" /></button>
         </div>
         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-          <label class="block">
-            <span class="mb-1 block text-xs text-gray-400">端口</span>
+          <div class="flex items-center gap-3">
+            <span class="w-16 shrink-0 text-xs text-gray-400">端口</span>
             <input
               v-model.number="settingsDraft.port"
               type="number"
-              class="w-full rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
+              class="w-28 rounded border border-gray-700 bg-surface-sunken px-3 py-1.5 font-mono text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
             />
-          </label>
+          </div>
 
           <div class="border-t border-gray-700 pt-4">
             <label class="block">
@@ -588,26 +584,6 @@ onMounted(() => run(load))
             </label>
           </div>
 
-          <div class="border-t border-gray-700 pt-4">
-            <label class="flex items-center gap-2">
-              <input v-model="settingsDraft.accessLogEnabled" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-600 bg-surface-sunken" />
-              <span class="text-xs text-gray-300">记录访问日志</span>
-            </label>
-            <input
-              v-if="settingsDraft.accessLogEnabled"
-              v-model="settingsDraft.accessLogPath"
-              class="mt-2 w-full rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <div class="border-t border-gray-700 pt-4">
-            <button
-              class="flex w-full items-center justify-center gap-1.5 rounded border border-gray-700 px-3 py-2 text-xs text-gray-300 transition hover:bg-surface-hover"
-              @click="openHttpConfig"
-            >
-              <Braces class="h-3.5 w-3.5" />编辑全局配置
-            </button>
-          </div>
 
           <div class="flex justify-end gap-2 border-t border-gray-700 pt-4">
             <button class="rounded border border-gray-700 px-4 py-2 text-sm text-gray-300 transition hover:bg-surface-hover" @click="settingsOpen = false">取消</button>
