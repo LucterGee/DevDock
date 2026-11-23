@@ -5,6 +5,7 @@ const crypto = require('crypto');
 
 const { resolveConfigPath } = require('../../utils/appPaths');
 const { generateLocationBlock } = require('./generator');
+const { buildDefaultHttpBody } = require('./configBuilder');
 const { resolveRoute } = require('./variables');
 
 const HEADER_MARK = '# devdock:generated';
@@ -31,6 +32,8 @@ const createDefaultState = () => ({
     backupLimit: 10,
     onConflict: 'ask',
     variables: [],
+    // 默认就写入一份可用的 http 配置，用户可自行删改
+    customHttp: buildDefaultHttpBody(),
   },
   routes: [],
 });

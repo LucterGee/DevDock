@@ -25,6 +25,12 @@ const toConfigPath = (target, prefix) => {
 // http 块的默认内容，也是全局配置弹框的预填值
 const buildDefaultHttpBody = () =>
   [
+    '  default_type  application/octet-stream;',
+    '',
+    '  sendfile        on;',
+    '',
+    '  keepalive_timeout  65;',
+    '',
     '  # nginx 默认上限 1m，超过会被 413 拒绝，代理上传需要放开',
     '  client_max_body_size 1000M;',
     '  client_body_timeout 600s;',

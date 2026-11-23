@@ -129,11 +129,14 @@ test('未自定义时 http 块不含任何内置内容', () => {
 });
 
 
-test('默认 http 内容只保留必要指令，日志以注释形式给出', () => {
+test('默认 http 内容含常用指令，日志以注释形式给出', () => {
   const body = buildDefaultHttpBody();
   const active = body.split('\n').filter((line) => line.trim() && !line.trim().startsWith('#'));
 
   assert.deepEqual(active.map((line) => line.trim()), [
+    'default_type  application/octet-stream;',
+    'sendfile        on;',
+    'keepalive_timeout  65;',
     'client_max_body_size 1000M;',
     'client_body_timeout 600s;',
     'client_header_timeout 600s;',
@@ -141,6 +144,16 @@ test('默认 http 内容只保留必要指令，日志以注释形式给出', ()
   assert.match(body, /# access_log\s+logs\/access\.log/);
   assert.match(body, /# log_format\s+main/);
   assert.doesNotMatch(body, /include/, '不引用外部文件');
+});
+
+test('默认状态里就带有 http 配置，删掉 nginx.conf 后会重新写入', () => {
+  const { createDefaultState } = require('./routeStore');
+  const state = createDefaultState();
+  assert.match(state.nginx.customHttp, /client_max_body_size 1000M;/);
+
+  const conf = buildMainConfig(state);
+  assert.match(conf, /default_type  application\/octet-stream;/);
+  assert.match(conf, /sendfile {8}on;/);
 });
 
 test('不再生成 access_log，由用户在全局配置里自行开启', () => {
