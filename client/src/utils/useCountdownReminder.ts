@@ -33,7 +33,9 @@ const showSystemNotification = (config: CountdownReminderConfig) => {
     },
     (result: NotificationResult = {}) => {
       if (!result.success) {
-        window.$toast?.warning?.(result.error || config.body, 5000);
+        // 系统通知不可用时（例如浏览器调试）退回到页面提示，
+        // 内容仍是提醒本身，而不是「环境不支持」这类错误信息
+        window.$toast?.warning?.(`${config.title}：${config.body}`, 8000);
       }
     }
   );
