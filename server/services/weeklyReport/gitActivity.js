@@ -49,14 +49,24 @@ const parseAuthorRecords = (output) => {
   return [...authors.values()].sort((a, b) => a.name.localeCompare(b.name));
 };
 
+const readGitConfigValue = async (cwd, key) => {
+  try {
+    return (await runGit(cwd, ['config', '--get', key])).trim();
+  } catch (error) {
+    return '';
+  }
+};
+
 const discoverAuthors = async (repositories, { months = 12 } = {}) => {
   const since = new Date();
   since.setMonth(since.getMonth() - Math.max(1, Number(months) || 12));
   const result = new Map();
   for (const repository of repositories || []) {
     try {
-      const configuredName = (await runGit(repository.path, ['config', '--get', 'user.name'])).trim();
-      const configuredEmail = (await runGit(repository.path, ['config', '--get', 'user.email'])).trim();
+      // 未配置 user.name 时 git config 会以退出码 1 结束，
+      // 不能让这里抛错中断后面的提交作者扫描
+      const configuredName = await readGitConfigValue(repository.path, 'user.name');
+      const configuredEmail = await readGitConfigValue(repository.path, 'user.email');
       if (configuredName) {
         const item = result.get(configuredName) || { name: configuredName, emails: [] };
         if (configuredEmail && !item.emails.includes(configuredEmail)) item.emails.push(configuredEmail);

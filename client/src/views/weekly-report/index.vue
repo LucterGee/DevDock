@@ -37,6 +37,15 @@ const emitRequest = <T,>(event: string, payload: unknown = {}) => new Promise<T>
   })
 })
 
+// 已选中的作者即使当前仓库扫不到，也要保留在列表里，避免看起来被清空
+const identityOptions = computed(() => {
+  const known = new Set(identities.value.map((identity) => identity.name))
+  const missing = selectedIdentities.value
+    .filter((name) => !known.has(name))
+    .map((name) => ({ name, emails: [] as string[] }))
+  return [...identities.value, ...missing].sort((a, b) => a.name.localeCompare(b.name))
+})
+
 const loadRepositories = async () => {
   repositories.value = await emitRequest<Repository[]>('weekly-report:repositories:list')
   const result = await emitRequest<{ selected: Identity[]; candidates: Identity[] }>('weekly-report:identities:list')
@@ -234,7 +243,7 @@ onMounted(() => { loadRepositories().catch((error) => window.$toast?.warning?.(e
 
         <section class="rounded border border-gray-700 bg-gray-800 p-4">
           <h2 class="mb-3 text-sm font-semibold">本人作者名</h2>
-          <label v-for="identity in identities" :key="identity.name" class="mb-2 flex items-start gap-2 text-sm">
+          <label v-for="identity in identityOptions" :key="identity.name" class="mb-2 flex items-start gap-2 text-sm">
             <input v-model="selectedIdentities" type="checkbox" :value="identity.name" class="mt-1 shrink-0" />
             <span class="min-w-0 flex-1">
               <span class="block truncate" :title="identity.name">{{ identity.name }}</span>
