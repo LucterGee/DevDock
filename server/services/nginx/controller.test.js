@@ -11,7 +11,7 @@ const { createNginxStore } = require('./routeStore');
 test('打包态按平台解析随包二进制', () => {
   assert.equal(
     resolveBinaryPath({ resourcesPath: '/app/Resources', isPackaged: true, platform: 'darwin' }),
-    '/app/Resources/nginx/darwin/nginx'
+    path.join('/app/Resources', 'nginx', 'darwin', 'nginx')
   );
   assert.equal(
     resolveBinaryPath({ resourcesPath: 'C:/app/Resources', isPackaged: true, platform: 'win32' }),
@@ -22,7 +22,7 @@ test('打包态按平台解析随包二进制', () => {
 test('开发态指向仓库 resources 目录', () => {
   assert.equal(
     resolveBinaryPath({ repoRoot: '/repo', isPackaged: false, platform: 'darwin' }),
-    '/repo/resources/nginx/darwin/nginx'
+    path.join('/repo', 'resources', 'nginx', 'darwin', 'nginx')
   );
 });
 
