@@ -12,10 +12,31 @@ const NGINX_DIR_NAME = 'nginx';
 const resolveBinaryPath = ({ resourcesPath, repoRoot, platform = process.platform, isPackaged = false }) => {
   const exe = platform === 'win32' ? 'nginx.exe' : 'nginx';
   const platformDir = platform === 'win32' ? 'win32' : platform === 'darwin' ? 'darwin' : 'linux';
-  if (isPackaged && resourcesPath) {
-    return path.join(resourcesPath, NGINX_DIR_NAME, platformDir, exe);
-  }
+
+  const packagedPath = resourcesPath
+    ? path.join(resourcesPath, NGINX_DIR_NAME, platformDir, exe)
+    : '';
+
+  if (isPackaged && packagedPath) return packagedPath;
+
+  // 打包后代码位于 app.asar 内，按 repoRoot 拼出来的路径会指向
+  // app.asar/resources/...，实际资源在 process.resourcesPath 下。
+  // 因此未显式标记打包态时，以真实存在的路径为准。
+  if (packagedPath && fs.existsSync(packagedPath)) return packagedPath;
+
   return path.join(repoRoot || process.cwd(), 'resources', NGINX_DIR_NAME, platformDir, exe);
+};
+
+// 服务端也可能以纯 Node 方式运行，这里做兼容判断
+const detectPackaged = () => {
+  try {
+    const { app } = require('electron');
+    if (app && typeof app.isPackaged === 'boolean') return app.isPackaged;
+  } catch (e) {
+    // 非 Electron 环境
+  }
+  const resourcesPath = process.resourcesPath || '';
+  return resourcesPath.includes('Contents/Resources');
 };
 
 // 所有动作都用 -p/-c 固定前缀与配置，绝不碰系统 nginx
@@ -66,7 +87,7 @@ const createNginxController = (options = {}) => {
   const platform = options.platform || process.platform;
   const repoRoot = options.repoRoot || path.join(__dirname, '..', '..', '..');
   const resourcesPath = options.resourcesPath || process.resourcesPath;
-  const isPackaged = Boolean(options.isPackaged);
+  const isPackaged = options.isPackaged === undefined ? detectPackaged() : Boolean(options.isPackaged);
   const execFileImpl = options.execFile || execFile;
   const store = options.store || createNginxStore();
 

@@ -19,6 +19,24 @@ test('打包态按平台解析随包二进制', () => {
   );
 });
 
+test('打包后按 process.resourcesPath 定位二进制，而非 asar 内路径', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'devdock-pack-'));
+  const resourcesDir = path.join(root, 'Resources');
+  const binDir = path.join(resourcesDir, 'nginx', 'darwin');
+  fs.mkdirSync(binDir, { recursive: true });
+  const binary = path.join(binDir, 'nginx');
+  fs.writeFileSync(binary, '');
+
+  const resolved = resolveBinaryPath({
+    resourcesPath: resourcesDir,
+    repoRoot: path.join(resourcesDir, 'app.asar'),
+    platform: 'darwin',
+    isPackaged: false,
+  });
+  assert.equal(resolved, binary);
+  assert.ok(!resolved.includes('app.asar'));
+});
+
 test('开发态指向仓库 resources 目录', () => {
   assert.equal(
     resolveBinaryPath({ repoRoot: '/repo', isPackaged: false, platform: 'darwin' }),
