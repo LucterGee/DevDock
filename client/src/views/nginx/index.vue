@@ -269,7 +269,8 @@ const settingsDraft = ref({
   routesDir: '',
   logDir: '',
   accessLogEnabled: false,
-  accessLogPath: ''
+  accessLogPath: '',
+  customHttp: ''
 })
 
 const openSettings = () => {
@@ -279,7 +280,8 @@ const openSettings = () => {
     routesDir: current.routesDir || '',
     logDir: current.logDir || '',
     accessLogEnabled: Boolean(current.accessLog?.enabled),
-    accessLogPath: current.accessLog?.path || ''
+    accessLogPath: current.accessLog?.path || '',
+    customHttp: current.customHttp || ''
   }
   settingsOpen.value = true
 }
@@ -296,7 +298,8 @@ const saveSettings = () => run(async () => {
         ...(current.accessLog || {}),
         enabled: settingsDraft.value.accessLogEnabled,
         path: settingsDraft.value.accessLogPath.trim() || current.accessLog?.path || ''
-      }
+      },
+      customHttp: settingsDraft.value.customHttp
     }
   })
   window.$toast?.success?.('设置已保存')
@@ -550,6 +553,19 @@ onMounted(() => run(load))
               v-model="settingsDraft.accessLogPath"
               class="mt-2 w-full rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
             />
+          </div>
+
+          <div class="border-t border-gray-700 pt-4">
+            <label class="block">
+              <span class="mb-1 block text-xs text-gray-400">全局配置（http 级）</span>
+              <textarea
+                v-model="settingsDraft.customHttp"
+                rows="6"
+                spellcheck="false"
+                class="w-full resize-y rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+                placeholder="gzip on;"
+              ></textarea>
+            </label>
           </div>
 
           <div class="flex justify-end gap-2 border-t border-gray-700 pt-4">

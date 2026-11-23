@@ -38,9 +38,14 @@ const buildMainConfig = (state) => {
     ? 'access_log ' + escapePath(nginx.accessLog.path) + ' main;'
     : 'access_log off;';
   const errorLogPath = (nginx.errorLog && nginx.errorLog.path) || path.posix.join(logDir, 'error.log');
+  const customHttp = typeof nginx.customHttp === 'string' ? nginx.customHttp.trim() : '';
+  const customHttpLines = customHttp
+    ? ['  # 自定义全局配置（来自设置）', ...customHttp.split('\n').map((line) => (line.trim() ? '  ' + line : '')), '']
+    : [];
 
   const lines = [
-    '# 由 DevDock 生成，请勿手工修改；自定义内容请放在 routes 目录或使用「原始块」路由',
+    '# 由 DevDock 生成，请勿手工修改；',
+    '# http 级自定义指令请写在「设置 → 全局配置」中，location 级内容请使用路由或「原始块」路由',
     'worker_processes 1;',
     'pid ' + path.posix.join(prefix, 'nginx.pid') + ';',
     'error_log ' + escapePath(errorLogPath) + ' warn;',
@@ -63,6 +68,7 @@ const buildMainConfig = (state) => {
     '',
     '  ' + accessLog,
     '',
+    ...customHttpLines,
     '  types {',
     ...MIME_TYPES.map((item) => '    ' + item),
     '  }',

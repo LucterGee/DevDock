@@ -63,3 +63,28 @@ test('Windows 反斜杠路径会转成正斜杠', () => {
 test('配置头标注为自动生成', () => {
   assert.match(buildMainConfig(baseState()), /由 DevDock 生成/);
 });
+
+test('全局配置片段注入到 http 块内', () => {
+  const conf = buildMainConfig(baseState({ customHttp: 'gzip on;\ngzip_types text/css;' }));
+  const lines = conf.split('\n');
+  const httpIndex = lines.findIndex((line) => line.trim() === 'http {');
+  const serverIndex = lines.findIndex((line) => line.trim().startsWith('server {'));
+  const gzipIndex = lines.findIndex((line) => line.includes('gzip on;'));
+  const gzipTypesIndex = lines.findIndex((line) => line.includes('gzip_types text/css;'));
+
+  assert.ok(httpIndex >= 0, '应包含 http 块');
+  assert.ok(gzipIndex > httpIndex && gzipIndex < serverIndex, 'gzip 应在 http 块内且在 server 之前');
+  assert.ok(gzipTypesIndex > gzipIndex, '多行内容应逐行写入');
+  assert.match(lines[gzipIndex], /^ {2}gzip on;$/, '应缩进两格');
+});
+
+test('未配置全局片段时不产生多余空行', () => {
+  const conf = buildMainConfig(baseState());
+  assert.doesNotMatch(conf, /自定义全局配置/);
+});
+
+test('配置头提示全局片段的位置', () => {
+  const conf = buildMainConfig(baseState());
+  assert.match(conf, /全局配置/);
+});
+
