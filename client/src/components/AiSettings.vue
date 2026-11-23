@@ -91,6 +91,14 @@
               <span class="text-sm font-medium">Tunnel</span>
             </div>
             <div
+              @click="showNodeView"
+              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
+              :class="currentView === 'node' ? 'bg-lime-500/20 text-lime-300' : 'text-gray-400 hover:bg-surface-hover'"
+            >
+              <span class="text-sm">N</span>
+              <span class="text-sm font-medium">Node 版本</span>
+            </div>
+            <div
               @click="showToolView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
               :class="currentView === 'tool' ? 'bg-emerald-500/20 text-emerald-300' : 'text-gray-400 hover:bg-surface-hover'"
@@ -494,6 +502,68 @@
             </div>
           </template>
 
+          <!-- Node 版本视图 -->
+          <template v-else-if="currentView === 'node'">
+            <div class="flex-1 p-6 overflow-y-auto">
+              <div class="pb-2 mb-5 border-b border-gray-700">
+                <h4 class="flex items-center gap-2 text-base font-bold text-gray-100">
+                  <span class="text-sm">N</span>
+                  Node 版本
+                </h4>
+              </div>
+
+              <section class="mb-6">
+                <div class="pb-1.5 mb-3 border-b border-gray-700">
+                  <h5 class="text-[11px] font-bold tracking-wider text-gray-500 uppercase">已安装</h5>
+                </div>
+                <div v-if="!nodeVersions.length" class="py-2 text-xs text-gray-500">未检测到任何 Node 版本</div>
+                <div
+                  v-for="item in nodeVersions"
+                  :key="item.version"
+                  class="flex items-center gap-3 border-b border-gray-700/60 py-2 text-sm last:border-b-0"
+                >
+                  <span class="w-24 font-mono text-gray-100">v{{ item.version }}</span>
+                  <span class="text-xs" :class="item.source === 'managed' ? 'text-lime-400' : 'text-gray-500'">
+                    {{ item.source === 'managed' ? '应用内' : 'nvm' }}
+                  </span>
+                  <button
+                    v-if="item.removable"
+                    class="ml-auto rounded px-2 py-1 text-xs text-gray-400 transition hover:bg-surface-hover hover:text-red-400"
+                    @click="removeNode(item.version)"
+                  >删除</button>
+                </div>
+              </section>
+
+              <section>
+                <div class="pb-1.5 mb-3 border-b border-gray-700">
+                  <h5 class="text-[11px] font-bold tracking-wider text-gray-500 uppercase">安装新版本</h5>
+                </div>
+                <div class="flex gap-2">
+                  <select
+                    v-model="nodeSelectedVersion"
+                    class="min-w-0 flex-1 rounded border border-gray-600 bg-surface-raised px-3 py-2 text-sm text-gray-100 focus:border-lime-500 focus:outline-none transition"
+                  >
+                    <option value="">选择版本…</option>
+                    <option v-for="item in nodeAvailable" :key="item.version" :value="item.version">
+                      v{{ item.version }}{{ item.lts ? ' · LTS ' + item.lts : '' }}
+                    </option>
+                  </select>
+                  <button
+                    class="shrink-0 rounded bg-lime-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-lime-500 disabled:opacity-50"
+                    :disabled="!nodeSelectedVersion || nodeInstalling"
+                    @click="installNode"
+                  >{{ nodeInstalling ? '安装中…' : '安装' }}</button>
+                </div>
+                <div v-if="nodeInstalling" class="mt-3">
+                  <div class="h-1.5 w-full overflow-hidden rounded bg-surface-sunken">
+                    <div class="h-full bg-lime-500 transition-all" :style="{ width: nodeProgress + '%' }"></div>
+                  </div>
+                  <div class="mt-1 text-xs text-gray-500">v{{ nodeInstallingVersion }} · {{ nodeProgress }}%</div>
+                </div>
+              </section>
+            </div>
+          </template>
+
           <!-- 外观视图 -->
           <template v-else-if="currentView === 'appearance'">
             <div class="flex-1 p-6 overflow-y-auto">
@@ -877,6 +947,72 @@ const showToolView = () => {
   isCreating.value = false;
 };
 
+// --- Node 版本 ---
+const nodeVersions = ref([]);
+const nodeAvailable = ref([]);
+const nodeSelectedVersion = ref('');
+const nodeInstalling = ref(false);
+const nodeInstallingVersion = ref('');
+const nodeProgress = ref(0);
+
+const loadNodeVersions = () => {
+  socket.emit('node:get-versions', (result) => {
+    nodeVersions.value = (result && result.details) || [];
+  });
+};
+
+const loadNodeAvailable = () => {
+  socket.emit('node:available', (result) => {
+    if (result && result.success) nodeAvailable.value = result.versions || [];
+    else if (result && result.error) window.$toast?.warning?.(result.error);
+  });
+};
+
+const showNodeView = () => {
+  applyFormData();
+  currentView.value = 'node';
+  currentEditId.value = null;
+  formData.value = null;
+  isCreating.value = false;
+  loadNodeVersions();
+  if (!nodeAvailable.value.length) loadNodeAvailable();
+};
+
+const installNode = () => {
+  const version = nodeSelectedVersion.value;
+  if (!version || nodeInstalling.value) return;
+  nodeInstalling.value = true;
+  nodeInstallingVersion.value = version;
+  nodeProgress.value = 0;
+  socket.emit('node:install', { version }, (result) => {
+    nodeInstalling.value = false;
+    if (result && result.success) {
+      window.$toast?.success?.(`Node v${version} 安装完成`);
+      nodeSelectedVersion.value = '';
+      loadNodeVersions();
+    } else {
+      window.$toast?.warning?.((result && result.error) || '安装失败');
+    }
+  });
+};
+
+const removeNode = (version) => {
+  socket.emit('node:remove', { version }, (result) => {
+    if (result && result.success) {
+      window.$toast?.success?.(`已删除 Node v${version}`);
+      loadNodeVersions();
+    } else {
+      window.$toast?.warning?.((result && result.error) || '删除失败');
+    }
+  });
+};
+
+const handleNodeInstallProgress = (payload) => {
+  if (!payload) return;
+  if (payload.version && payload.version !== nodeInstallingVersion.value) return;
+  nodeProgress.value = payload.percent || 0;
+};
+
 const showAppearanceView = () => {
   applyFormData();
   currentView.value = 'appearance';
@@ -1032,6 +1168,7 @@ const installUpdateNow = () => {
 onMounted(() => {
   socket.on('tunnel:state', handleTunnelState);
   socket.on('app:update:state', applyAppUpdateState);
+  socket.on('node:install:progress', handleNodeInstallProgress);
   socket.emit('tunnel:get-state', handleTunnelState);
   socket.emit('ai:secret-storage', (result) => {
     secretStorageAvailable.value = result ? result.available !== false : true;

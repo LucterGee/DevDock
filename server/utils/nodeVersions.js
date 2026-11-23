@@ -8,6 +8,7 @@
  *   macOS   (nvm):         NVM_DIR/versions/node/v18.17.0/bin/node
  */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const semver = require('semver');
 
@@ -40,6 +41,22 @@ function getNvmHome() {
  * Windows: NVM_HOME          (版本直接在根目录下: NVM_HOME/v18.17.0/)
  * macOS:   NVM_DIR/versions/node (版本在子目录下: NVM_DIR/versions/node/v18.17.0/)
  */
+// 应用自己下载的 Node 版本目录
+const getManagedVersionsBase = () => {
+  const dir = path.join(os.homedir(), '.devdock', 'node');
+  return fs.existsSync(dir) ? dir : null;
+};
+
+// 版本目录的所有来源：nvm 与应用自管目录
+function getVersionBases() {
+  const bases = [];
+  const nvmBase = getVersionsBase();
+  if (nvmBase) bases.push(nvmBase);
+  const managedBase = getManagedVersionsBase();
+  if (managedBase) bases.push(managedBase);
+  return bases;
+}
+
 function getVersionsBase() {
   const nvmHome = getNvmHome();
   if (!nvmHome) return null;
@@ -74,28 +91,25 @@ function getBinDir(versionDir) {
  * @returns {string[]} 已安装的版本号数组（降序），如 ['22.0.0', '20.11.0', '18.17.0']
  */
 function getInstalledVersions() {
-  const base = getVersionsBase();
-  if (!base) return [];
+  const bases = getVersionBases();
+  if (bases.length === 0) return [];
 
-  try {
-    const entries = fs.readdirSync(base, { withFileTypes: true });
-    const versions = [];
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const dirName = entry.name;
-      const cleaned = dirName.replace(/^v/, '');
-      if (!semver.valid(cleaned)) continue;
-      // 确认目录下有 node 可执行文件
-      const versionDir = path.join(base, dirName);
-      if (fs.existsSync(getNodeBin(versionDir))) {
-        versions.push(cleaned);
+  const versions = new Set();
+  for (const base of bases) {
+    try {
+      const entries = fs.readdirSync(base, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const cleaned = entry.name.replace(/^v/, '');
+        if (!semver.valid(cleaned)) continue;
+        // 确认目录下有 node 可执行文件
+        if (fs.existsSync(getNodeBin(path.join(base, entry.name)))) versions.add(cleaned);
       }
+    } catch (e) {
+      console.error('[nodeVersions] 扫描版本目录失败:', e.message);
     }
-    return versions.sort((a, b) => semver.rcompare(a, b));
-  } catch (e) {
-    console.error('[nodeVersions] 扫描已安装版本失败:', e.message);
-    return [];
   }
+  return [...versions].sort((a, b) => semver.rcompare(a, b));
 }
 
 /**
@@ -192,14 +206,15 @@ function resolveNodeVersion(rawVersion) {
  * @returns {string|null} 版本目录绝对路径
  */
 function getVersionDir(version) {
-  const base = getVersionsBase();
-  if (!base || !version) return null;
+  if (!version) return null;
 
-  // 尝试 v12.22.12 和 12.22.12 两种目录名
-  let versionDir = path.join(base, `v${version}`);
-  if (fs.existsSync(versionDir)) return versionDir;
-  versionDir = path.join(base, version);
-  if (fs.existsSync(versionDir)) return versionDir;
+  // 尝试 v12.22.12 和 12.22.12 两种目录名，逐个来源查找
+  for (const base of getVersionBases()) {
+    const withV = path.join(base, `v${version}`);
+    if (fs.existsSync(withV)) return withV;
+    const plain = path.join(base, version);
+    if (fs.existsSync(plain)) return plain;
+  }
   return null;
 }
 
@@ -316,6 +331,8 @@ function buildEnvWithNodeVersion(version) {
 
 module.exports = {
   getNvmHome,
+  getManagedVersionsBase,
+  getVersionBases,
   getInstalledVersions,
   detectProjectNodeVersion,
   resolveNodeVersion,

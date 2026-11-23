@@ -10,6 +10,7 @@ const { spawn, exec, execFile } = require('child_process');
 
 const monitor = require('./utils/monitor');
 const nodeVersions = require('./utils/nodeVersions');
+const nodeManager = require('./services/node/manager');
 const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveConfigPath } = require('./utils/appPaths');
@@ -1809,13 +1810,44 @@ if ($folder) { $folder.Self.Path }
   // --- Node 版本管理事件 ---
   socket.on('node:get-versions', (callback) => {
     const nvmHome = nodeVersions.getNvmHome();
-    const versions = nodeVersions.getInstalledVersions();
+    const details = nodeManager.listInstalled();
+    const versions = details.map((item) => item.version);
     console.log(`📦 [Node] 已安装版本: ${versions.length > 0 ? versions.join(', ') : '未检测到 nvm'}`);
     callback({
       nvmDetected: !!nvmHome,
       nvmHome: nvmHome || '',
-      versions
+      managedDir: nodeManager.getManagedDir(),
+      versions,
+      details
     });
+  });
+
+  socket.on('node:available', async (callback) => {
+    try {
+      callback({ success: true, versions: await nodeManager.listAvailable() });
+    } catch (error) {
+      callback({ success: false, error: error.message });
+    }
+  });
+
+  socket.on('node:install', async ({ version } = {}, callback) => {
+    try {
+      const result = await nodeManager.install(version, (progress) => {
+        socket.emit('node:install:progress', { version, ...progress });
+      });
+      socket.emit('node:install:progress', { version, percent: 100, done: true });
+      callback({ success: true, ...result });
+    } catch (error) {
+      callback({ success: false, error: error.message, code: error.code || '' });
+    }
+  });
+
+  socket.on('node:remove', ({ version } = {}, callback) => {
+    try {
+      callback({ success: true, ...nodeManager.remove(version) });
+    } catch (error) {
+      callback({ success: false, error: error.message, code: error.code || '' });
+    }
   });
 
   socket.on('node:detect-version', ({ projectPath }, callback) => {

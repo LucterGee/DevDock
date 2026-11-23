@@ -75,6 +75,11 @@ main.js (Electron 主进程)
 - **Socket 连接**：`utils/socket.ts` 中根据 `import.meta.env.DEV` 判断连接地址
 - **AI 工具**：`utils/ai.ts` 提供 `callKuyepClaude()` 调用 AI API
 
+### Node 版本管理 (`server/services/node/manager.js`)
+
+管理应用内下载的 Node 版本（`~/.devdock/node/`）：列出可用版本、下载解压安装、删除。
+与 `server/utils/nodeVersions.js` 配合：后者负责合并扫描 nvm 与自管目录，并把目标版本的 bin 写入子进程 PATH。
+
 ### 监控模块 (`server/utils/monitor.js`)
 
 独立模块，聚合父子进程的 CPU/内存使用率，通过 Socket.io 广播给前端。
