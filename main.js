@@ -123,11 +123,11 @@ function ensureServerUrl() {
 }
 
 function resolveAppIconPath() {
-  const candidates = [
-    path.join(__dirname, 'client/dist/favicon.ico'),
-    path.join(__dirname, 'client/dist/mac.png'),
-    path.join(__dirname, 'client/src/assets/main.png')
-  ];
+  const ico = path.join(__dirname, 'client/dist/favicon.ico');
+  const png = path.join(__dirname, 'client/dist/mac.png');
+  const legacyPng = path.join(__dirname, 'client/src/assets/main.png');
+  // macOS 的 nativeImage 不支持 .ico，Windows 的托盘更偏好 .ico
+  const candidates = process.platform === 'win32' ? [ico, png, legacyPng] : [png, ico, legacyPng];
   return candidates.find((item) => fs.existsSync(item)) || candidates[0];
 }
 
