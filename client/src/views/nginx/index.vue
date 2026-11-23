@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Braces, Download, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import { Braces, Download, FileCode, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import { ensureHomeDir, toDisplayPath } from '../../utils/pathDisplay'
 import RouteEditor from './RouteEditor.vue'
 import VariablesDialog from './VariablesDialog.vue'
@@ -406,10 +406,10 @@ onMounted(() => run(load))
           <span v-if="missingVariables.length" class="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-blue-500" />
         </button>
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="openHttpConfig">
-          全局配置
+          <FileCode class="h-3.5 w-3.5" />Nginx全局配置
         </button>
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy" @click="openSettings">
-          <Settings class="h-3.5 w-3.5" />设置
+          <Settings class="h-3.5 w-3.5" />Nginx基础配置
         </button>
         <button class="rounded bg-blue-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-blue-500" @click="$router.push('/dashboard')">返回项目</button>
       </div>
@@ -558,7 +558,7 @@ onMounted(() => run(load))
     <div v-if="settingsOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="settingsOpen = false">
       <div class="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
         <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
-          <h3 class="text-sm font-semibold text-gray-100">Nginx 设置</h3>
+          <h3 class="text-sm font-semibold text-gray-100">Nginx基础配置</h3>
           <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="settingsOpen = false"><X class="h-4 w-4" /></button>
         </div>
         <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -606,7 +606,7 @@ onMounted(() => run(load))
     <div v-if="httpConfigOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="httpConfigOpen = false">
       <div class="flex h-[82vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
         <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
-          <h3 class="text-sm font-semibold text-gray-100">全局配置</h3>
+          <h3 class="text-sm font-semibold text-gray-100">Nginx全局配置</h3>
           <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="httpConfigOpen = false"><X class="h-4 w-4" /></button>
         </div>
         <div class="min-h-0 flex-1 p-4">
