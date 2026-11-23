@@ -1836,6 +1836,7 @@ if ($folder) { $folder.Self.Path }
         socket.emit('node:install:progress', { version, ...progress });
       });
       socket.emit('node:install:progress', { version, percent: 100, done: true });
+      io.emit('node:versions:changed');
       callback({ success: true, ...result });
     } catch (error) {
       callback({ success: false, error: error.message, code: error.code || '' });
@@ -1844,7 +1845,9 @@ if ($folder) { $folder.Self.Path }
 
   socket.on('node:remove', ({ version } = {}, callback) => {
     try {
-      callback({ success: true, ...nodeManager.remove(version) });
+      const result = nodeManager.remove(version);
+      io.emit('node:versions:changed');
+      callback({ success: true, ...result });
     } catch (error) {
       callback({ success: false, error: error.message, code: error.code || '' });
     }

@@ -167,22 +167,27 @@ const reloadNginx = () => {
 }
 
 // --- 初始化 ---
+// 已安装的 Node 版本列表；安装或删除后由后端广播触发刷新
+const refreshNodeVersions = () => {
+  socket.emit('node:get-versions', (data) => {
+    if (!data) return
+    nvmDetected.value = data.nvmDetected
+    installedNodeVersions.value = data.versions || []
+  })
+}
+
 onMounted(() => {
   refreshNginxStatus()
 
   loadHiddenStore(loadWorkspaceAndScan)
 
-  // 加载已安装的 Node 版本列表
-  socket.emit('node:get-versions', (data) => {
-    nvmDetected.value = data.nvmDetected
-    installedNodeVersions.value = data.versions || []
-    console.log(`📦 NVM ${data.nvmDetected ? '已检测到' : '未检测到'}, 已安装版本: ${data.versions.length}`)
-  })
+  refreshNodeVersions()
 
   // 建立连接日志
   socket.on('connect', () => console.log('✅ Socket已连接, id:', socket.id))
   socket.on('disconnect', (reason) => console.warn('❌ Socket断开:', reason))
   socket.on('reconnect', () => console.log('🔄 Socket重连成功'))
+  socket.on('node:versions:changed', refreshNodeVersions)
   socket.on('tunnel:state', (state) => {
     if (state) tunnelState.value = state
   })
