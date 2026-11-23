@@ -53,7 +53,9 @@ const rememberCaret = (index: number, field: TargetField, event: Event) => {
 }
 
 const toggleMenu = (index: number, field: TargetField) => {
-  if (menuIndex.value === index) {
+  // 同一行的两个输入框各有一个选择器，需要按「行号 + 字段」判断，
+  // 否则在 proxyPass 打开时点 referer 会把它关掉
+  if (menuIndex.value === index && menuField.value === field) {
     menuIndex.value = -1
     return
   }
