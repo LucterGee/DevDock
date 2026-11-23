@@ -67,7 +67,7 @@
 ## 6. 相关说明
 
 - 内置 Tunnel 网关地址：`127.0.0.1:26324`
-- 配置存储于：`~/.devdock-config.json` 的 `ai_tunnel_config` 字段
+- 配置存储于：`~/.devdock/config.json` 的 `ai_tunnel_config` 字段
 
 ## 7. 热更新注意事项（Vite / Webpack）
 

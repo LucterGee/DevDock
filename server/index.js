@@ -12,6 +12,7 @@ const monitor = require('./utils/monitor');
 const nodeVersions = require('./utils/nodeVersions');
 const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
+const { resolveConfigPath } = require('./utils/appPaths');
 const { resolveCommandExecution } = require('./utils/commandExecution');
 const {
   TERMINAL_CONFIG_KEY,
@@ -38,9 +39,9 @@ const {
 } = require('./utils/editors');
 
 // 配置文件存在用户目录下，防止误删
-const CONFIG_PATH = path.join(os.homedir(), '.devdock-config.json');
-const WEEKLY_REPORT_STATE_PATH = path.join(os.homedir(), '.devdock-weekly-report.json');
-const WEEKLY_REPORT_CACHE_PATH = path.join(os.homedir(), '.devdock-weekly-report-cache.json');
+const CONFIG_PATH = resolveConfigPath('config.json', '.devdock-config.json');
+const WEEKLY_REPORT_STATE_PATH = resolveConfigPath('weekly-report.json', '.devdock-weekly-report.json');
+const WEEKLY_REPORT_CACHE_PATH = resolveConfigPath('weekly-report-cache.json', '.devdock-weekly-report-cache.json');
 
 const weeklyReportRuntime = createWeeklyReportRuntime({
   statePath: WEEKLY_REPORT_STATE_PATH,

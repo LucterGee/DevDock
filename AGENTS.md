@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## 项目概述
 
-DevDock 是一个基于 Electron 33 + Vue 3 + Express 5 的跨平台桌面开发管理工具。用于可视化管理本地项目、执行脚本、监控进程资源、集成 AI 辅助功能。
+DevDock 是一个基于 Electron 42 + Vue 3 + Express 5 的跨平台桌面开发管理工具。用于可视化管理本地项目、执行脚本、监控进程资源、集成 AI 辅助功能。
 
 ## 常用命令
 
@@ -51,7 +51,7 @@ main.js (Electron 主进程)
 - `scan-dir` / `open-folder-dialog` — 项目扫描与目录选择
 - `start-task` / `stop-task` — 脚本执行与进程管理
 - `git:get-diff` / `git:commit` — Git 操作
-- `config:load` / `config:save` — 持久化配置（存储于 `~/.devdock-config.json`）
+- `config:load` / `config:save` — 持久化配置（存储于 `~/.devdock/config.json`）
 - `proxy:claude` — AI 代理请求
 - `monitor:update` — 进程资源监控广播（每 2 秒）
 

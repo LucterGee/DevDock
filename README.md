@@ -5,7 +5,7 @@
     <b>新一代跨平台开发管理工具</b>
   </p>
   <p>
-    基于 Electron 33 + Vue 3 + Express 5 构建，专为前端开发者打造的高效本地工作台。
+    基于 Electron 42 + Vue 3 + Express 5 构建，专为前端开发者打造的高效本地工作台。
   </p>
 
   <a href="https://github.com/LucterGee/DevDock/actions">
@@ -197,7 +197,7 @@ git push origin v1.0.0
 
 ## 配置文件
 
-用户配置持久化存储在 `~/.devdock-config.json`，包含：
+用户配置持久化存储在 `~/.devdock/config.json`，包含：
 
 - `ai_config_list` — AI 模型配置列表
 - `ai_active_id` — 当前激活的 AI 模型
@@ -213,7 +213,7 @@ Thanks to [linux社区](linux.do) — 前端终端集成效能工具
 
 周报页面地址为 `#/weekly-report`。支持导入 Git 仓库、选择需要精确匹配的 Git 作者名、按日期范围采集提交、审核本次纳入的提交，以及生成可继续编辑的 Markdown 周报。
 
-周报配置与历史记录保存在本地的 `~/.devdock-weekly-report.json`，活动缓存保存在 `~/.devdock-weekly-report-cache.json`。默认只采集 Git 提交元数据和文件变更统计，不读取源代码差异；只有明确请求提交详情时才会读取经过长度限制的 patch。
+周报配置与历史记录保存在本地的 `~/.devdock/weekly-report.json`，活动缓存保存在 `~/.devdock/weekly-report-cache.json`。默认只采集 Git 提交元数据和文件变更统计，不读取源代码差异；只有明确请求提交详情时才会读取经过长度限制的 patch。
 
 在 AI 设置中为周报场景选择模型后，可以使用 DeepSeek（OpenAI 兼容接口）、Gemini（原生 `generateContent` 接口）或 OpenAI Responses API。发送给模型前，系统会对周报上下文进行路径脱敏和长度限制。
 

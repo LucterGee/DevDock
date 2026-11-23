@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
+const { resolveConfigPath } = require('../../utils/appPaths');
 const { generateLocationBlock } = require('./generator');
 const { resolveRoute } = require('./variables');
 
@@ -13,7 +14,7 @@ const DEFAULT_ROUTE_DIR = path.join(DEFAULT_PREFIX_DIR, 'routes');
 const DEFAULT_LOG_DIR = path.join(DEFAULT_PREFIX_DIR, 'logs');
 const DEFAULT_BACKUP_DIR = path.join(DEFAULT_PREFIX_DIR, 'backups');
 const DEFAULT_PORT = 18080;
-const DEFAULT_STATE_PATH = path.join(os.homedir(), '.devdock-nginx.json');
+const DEFAULT_STATE_PATH = resolveConfigPath('nginx.json', '.devdock-nginx.json');
 
 const createDefaultState = () => ({
   version: 1,
