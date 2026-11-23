@@ -139,7 +139,6 @@ const submit = () => {
           <input
             v-model="draft.path"
             class="w-full rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-            placeholder="/api/"
           />
         </label>
 
@@ -148,7 +147,6 @@ const submit = () => {
           <input
             v-model="draft.note"
             class="w-full rounded border border-gray-700 bg-surface-sunken px-3 py-2 text-xs text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-            placeholder="备注"
           />
         </label>
 

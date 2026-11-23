@@ -40,7 +40,6 @@ const runStateLabel = computed(() => {
 })
 
 const selected = computed(() => routes.value.find((route) => route.id === selectedId.value) || null)
-const enabledCount = computed(() => routes.value.filter((route) => route.enabled).length)
 const conflict = computed(() => conflicts.value.find((item) => item.id === selectedId.value) || null)
 const filtered = computed(() => {
   const keyword = search.value.trim().toLowerCase()
@@ -87,10 +86,6 @@ const select = (id: string) => {
   addingTarget.value = false
 }
 
-const toggleRoute = (route: NginxRoute) => run(async () => {
-  replaceRoute(await nginxCall<NginxRoute>('nginx:route:toggle', { id: route.id, enabled: !route.enabled }))
-})
-
 const saveRoute = () => run(async () => {
   if (!selected.value) return
   const saved = await nginxCall<NginxRoute>('nginx:route:save', { route: { ...selected.value, note: noteDraft.value } })
@@ -115,7 +110,6 @@ const emptyRoute = (): NginxRoute => ({
   id: '',
   path: '',
   note: '',
-  enabled: true,
   kind: 'proxy',
   activeTargetId: '',
   targets: [{ id: 'target-1', label: '', proxyPass: '', referer: '' }],
@@ -344,7 +338,6 @@ onMounted(() => run(load))
         />
         <span class="text-xs" :class="status?.running ? 'text-green-400' : 'text-gray-400'">{{ runStateLabel }}</span>
         <span class="text-xs text-gray-400">端口 {{ status?.port ?? '—' }}</span>
-        <span class="text-xs text-gray-400">{{ routes.length }} 条（{{ enabledCount }} 启用）</span>
       </div>
       <div class="flex shrink-0 items-center gap-2">
         <button class="flex items-center gap-1.5 rounded bg-surface px-3 py-2 text-xs text-gray-100 transition hover:bg-surface-hover disabled:opacity-50" :disabled="busy || !canTest" @click="runAction('nginx:validate')">
@@ -391,12 +384,6 @@ onMounted(() => run(load))
             :class="route.id === selectedId ? 'bg-surface-hover' : ''"
             @click="select(route.id)"
           >
-            <button
-              class="h-2.5 w-2.5 shrink-0 rounded-full transition"
-              :class="route.enabled ? 'bg-green-500' : 'bg-gray-600'"
-              :title="route.enabled ? '已启用' : '已停用'"
-              @click.stop="toggleRoute(route)"
-            />
             <div class="min-w-0 flex-1">
               <div class="truncate font-mono text-xs text-gray-100" :title="route.path">{{ route.path }}</div>
               <div class="truncate font-mono text-[10px] text-gray-500" :title="activeTarget(route)?.proxyPass || ''">{{ activeTarget(route)?.proxyPass || '' }}</div>

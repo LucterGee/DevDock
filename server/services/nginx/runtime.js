@@ -63,14 +63,6 @@ const createNginxRuntime = (options = {}) => {
     return routes.length !== (current.routes || []).length;
   };
 
-  const setEnabled = (id, enabled) => {
-    const current = state();
-    const route = findRoute(current, id);
-    if (!route) return null;
-    route.enabled = Boolean(enabled);
-    save(current);
-    return route;
-  };
 
   const setActiveTarget = (routeId, targetId) => {
     const current = state();
@@ -145,7 +137,6 @@ const createNginxRuntime = (options = {}) => {
       id: route.id || slugify(route.path) + '-' + (index + 1),
       path: route.path,
       note: route.note || '',
-      enabled: route.enabled !== false,
       kind: route.kind === 'raw' ? 'raw' : 'proxy',
       activeTargetId: route.activeTargetId || (route.targets[0] && route.targets[0].id) || '',
       targets: route.targets,
@@ -217,7 +208,6 @@ const createNginxRuntime = (options = {}) => {
     validateImportPayload,
     upsertRoute,
     removeRoute,
-    setEnabled,
     setActiveTarget,
     addTarget,
     removeTarget,

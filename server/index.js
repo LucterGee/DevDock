@@ -1933,11 +1933,6 @@ if ($folder) { $folder.Self.Path }
     return { removed };
   }));
 
-  socket.on('nginx:route:toggle', ({ id, enabled }, callback) => nginxGuard(callback, () => {
-    const route = nginxRuntime.setEnabled(id, enabled);
-    nginxRuntime.apply();
-    return route;
-  }));
 
   socket.on('nginx:target:add', ({ routeId, target }, callback) => nginxGuard(callback, () => {
     const route = nginxRuntime.addTarget(routeId, target);

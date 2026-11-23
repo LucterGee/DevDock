@@ -73,13 +73,10 @@ test('overview 返回排序后的路由与状态', () => {
 
 
 
-test('开关与目标切换写入状态', () => {
+test('目标增删与切换写入状态', () => {
   const { runtime } = setup();
   seed(runtime);
   const id = runtime.overview().routes[0].id;
-
-  runtime.setEnabled(id, false);
-  assert.equal(runtime.overview().routes.find((r) => r.id === id).enabled, false);
 
   runtime.addTarget(id, { label: '同事联调', proxyPass: 'http://192.168.1.5:8107', referer: '' });
   const withTarget = runtime.overview().routes.find((r) => r.id === id);
@@ -95,17 +92,15 @@ test('开关与目标切换写入状态', () => {
   assert.notEqual(afterRemove.activeTargetId, newTargetId);
 });
 
-test('apply 写配置并同步路由文件，停用的路由不落盘', () => {
+test('apply 写配置并同步全部路由文件', () => {
   const { runtime, routesDir, calls } = setup();
   seed(runtime);
-  const routes = runtime.overview().routes;
-  runtime.setEnabled(routes[0].id, false);
 
   const result = runtime.apply();
   assert.equal(calls.includes('writeConfig'), true);
-  assert.equal(result.written.length, 1);
+  assert.equal(result.written.length, 2);
   const files = fs.readdirSync(routesDir).filter((name) => name.endsWith('.conf'));
-  assert.equal(files.length, 1);
+  assert.equal(files.length, 2);
 });
 
 test('removeRoute 删除路由', () => {

@@ -102,7 +102,7 @@ test('sync 不触碰未托管文件', () => {
   assert.equal(fs.readFileSync(own, 'utf8'), 'location /mine { return 200; }\n');
 });
 
-test('sync 删除已移除或停用路由对应的托管文件', () => {
+test('sync 删除已移除路由对应的托管文件', () => {
   const { store, routesDir } = makeStore();
   const alpha = makeRoute('alpha');
   const beta = makeRoute('beta');
@@ -110,7 +110,7 @@ test('sync 删除已移除或停用路由对应的托管文件', () => {
   assert.equal(fs.existsSync(path.join(routesDir, 'alpha.conf')), true);
   assert.equal(fs.existsSync(path.join(routesDir, 'beta.conf')), true);
 
-  store.sync({ ...createDefaultState(), routes: [alpha, { ...beta, enabled: false }] });
+  store.sync({ ...createDefaultState(), routes: [alpha] });
   assert.equal(fs.existsSync(path.join(routesDir, 'alpha.conf')), true);
   assert.equal(fs.existsSync(path.join(routesDir, 'beta.conf')), false);
 });

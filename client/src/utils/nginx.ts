@@ -6,7 +6,6 @@ export type NginxRoute = {
   id: string
   path: string
   note: string
-  enabled: boolean
   kind: 'proxy' | 'raw'
   activeTargetId: string
   targets: NginxTarget[]

@@ -77,7 +77,6 @@ const locationToRoute = (location) => {
     id: location.id,
     path: location.pattern,
     note: location.note || '',
-    enabled: true,
     kind: (location.unknown && location.unknown.length) || !proxyPass ? 'raw' : 'proxy',
     activeTargetId: targets.length ? 'default' : '',
     targets,

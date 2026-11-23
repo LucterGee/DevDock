@@ -194,7 +194,6 @@ const createNginxStore = (options = {}) => {
     const activeIds = new Set();
 
     for (const route of routes) {
-      if (route.enabled === false) continue;
       activeIds.add(route.id);
       if (editedIds.has(route.id) && !force.has(route.id)) {
         result.skipped.push({ id: route.id, reason: 'edited' });
