@@ -14,6 +14,7 @@ const nodeManager = require('./services/node/manager');
 const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveConfigPath } = require('./utils/appPaths');
+const { expandHome } = require('./utils/pathUtils');
 const { isAvailable: isSecretStorageAvailable } = require('./utils/secretStore');
 const { openAiConfigList, sealAiConfigList, migratePlaintextSecrets } = require('./utils/aiSecrets');
 const { resolveCommandExecution } = require('./utils/commandExecution');
@@ -1129,7 +1130,7 @@ if ($folder) { $folder.Self.Path }
 
   // 1. 扫描目录
   socket.on('scan-dir', (dirPath) => {
-    const projects = scanProjects(dirPath);
+    const projects = scanProjects(expandHome(dirPath));
     socket.emit('projects-loaded', enrichProjects(projects));
   });
 
@@ -1703,6 +1704,11 @@ if ($folder) { $folder.Self.Path }
   socket.on('ai:secret-storage', (callback) => {
     callback({ available: isSecretStorageAvailable() });
   });
+  // 界面把 home 目录显示成 ~
+  socket.on('app:home-dir', (callback) => {
+    callback(os.homedir());
+  });
+
   socket.on('config:load', (key, callback) => {
     const allData = readConfigFile();
     let value = allData[key] || null; // 取出对应 key 的值
@@ -1751,7 +1757,7 @@ if ($folder) { $folder.Self.Path }
   socket.on('weekly-report:repositories:add', ({ projectPath } = {}, callback) =>
     weeklyCallback(callback, () => weeklyReportRuntime.registry.add(projectPath)));
   socket.on('weekly-report:repositories:import-root', ({ rootPath, maxDepth = 5 } = {}, callback) =>
-    weeklyCallback(callback, () => weeklyReportRuntime.registry.importRoot(rootPath, { maxDepth })));
+    weeklyCallback(callback, () => weeklyReportRuntime.registry.importRoot(expandHome(rootPath), { maxDepth })));
   socket.on('weekly-report:repositories:set-enabled', ({ id, enabled } = {}, callback) =>
     weeklyCallback(callback, () => weeklyReportRuntime.registry.setEnabled(id, enabled)));
   socket.on('weekly-report:repositories:remove', ({ id } = {}, callback) =>
@@ -2097,7 +2103,10 @@ if ($folder) { $folder.Self.Path }
 
   socket.on('nginx:settings:save', ({ nginx }, callback) => nginxGuard(callback, () => {
     const state = nginxRuntime.store.load();
-    state.nginx = { ...state.nginx, ...(nginx || {}) };
+    const incoming = { ...(nginx || {}) };
+    if (incoming.routesDir) incoming.routesDir = expandHome(incoming.routesDir);
+    if (incoming.logDir) incoming.logDir = expandHome(incoming.logDir);
+    state.nginx = { ...state.nginx, ...incoming };
     nginxRuntime.store.save(state);
     nginxRuntime.apply();
     return state.nginx;

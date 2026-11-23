@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Braces, Download, FileText, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
+import { ensureHomeDir, toDisplayPath } from '../../utils/pathDisplay'
 import RouteEditor from './RouteEditor.vue'
 import VariablesDialog from './VariablesDialog.vue'
 import {
@@ -274,11 +275,12 @@ const settingsDraft = ref({
 })
 
 const openSettings = () => {
+  ensureHomeDir()
   const current = nginxSettings.value || {}
   settingsDraft.value = {
     port: current.port ?? 18080,
-    routesDir: current.routesDir || '',
-    logDir: current.logDir || '',
+    routesDir: toDisplayPath(current.routesDir),
+    logDir: toDisplayPath(current.logDir),
     accessLogEnabled: Boolean(current.accessLog?.enabled),
     accessLogPath: current.accessLog?.path || '',
     customHttp: current.customHttp || ''

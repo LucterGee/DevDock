@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { expandHome } = require('./pathUtils');
+
 const WECHAT_DEVTOOLS_CONFIG_KEY = 'wechat_devtools_config';
 
 const trimString = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -13,7 +15,7 @@ function normalizeWechatDevtoolsConfig(rawConfig) {
     || trimString(source.windowsPath)
     || trimString(source.macosPath);
 
-  return { path: configuredPath };
+  return { path: expandHome(configuredPath) };
 }
 
 function getWechatCliCandidates(configuredPath, platform = process.platform) {

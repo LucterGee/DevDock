@@ -1,3 +1,5 @@
+const { expandHome } = require('./pathUtils');
+
 const EDITOR_CONFIG_KEY = 'editor_config';
 
 const EDITOR_OPTIONS = [
@@ -20,7 +22,7 @@ const normalizeEditorConfig = (rawConfig) => {
 
   return {
     preset,
-    customCommand: typeof source.customCommand === 'string' ? source.customCommand.trim() : '',
+    customCommand: expandHome(typeof source.customCommand === 'string' ? source.customCommand : ''),
   };
 };
 
