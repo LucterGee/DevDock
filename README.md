@@ -124,7 +124,7 @@ API Key 经 Electron `safeStorage` 加密后写入配置（macOS 走 Keychain，
 - 支持变量（如 `${api_host}`），生成配置时统一替换
 - 固定头（`proxy_http_version` / `Host` / `Upgrade` / `Connection`）可勾选，界面直接显示写入的完整指令
 - http 块内容完全由「全局配置」决定（顶部按钮进入，带行号与 Tab 支持），默认预填一份常规配置，可随意增删
-- 启动时会在 prefix 下生成 `mime.types`，配置里可以直接 `include mime.types;`
+- 默认配置不引用任何外部文件（不含 `include mime.types`），反向代理场景下 MIME 由上游响应头决定
 - 访问日志有独立开关与路径，需要时开启后重载即可
 - 生成配置里的路径相对 nginx 的 prefix 解析（`pid nginx.pid`、`include routes/*.conf`），不写死用户目录
 - 支持校验配置、重载、启动、停止，监听端口可在设置中调整

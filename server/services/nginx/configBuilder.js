@@ -2,24 +2,6 @@ const path = require('path');
 
 const DEFAULT_PORT = 18080;
 
-const MIME_TYPES = [
-  'text/html html htm;',
-  'text/css css;',
-  'application/javascript js mjs;',
-  'application/json json;',
-  'application/xml xml;',
-  'image/svg+xml svg;',
-  'image/png png;',
-  'image/jpeg jpg jpeg;',
-  'image/gif gif;',
-  'image/webp webp;',
-  'image/x-icon ico;',
-  'font/woff woff;',
-  'font/woff2 woff2;',
-  'font/ttf ttf;',
-  'application/wasm wasm;',
-];
-
 const escapePath = (value) => String(value || '').replace(/\\/g, '/');
 
 const resolvePort = (nginx) => {
@@ -40,14 +22,9 @@ const toConfigPath = (target, prefix) => {
 };
 
 // http 块的默认内容，也是设置里「全局配置」的初始值
-// 独立的 mime.types 文件内容，供配置里的 include mime.types 使用
-const buildMimeTypes = () =>
-  ['types {', ...MIME_TYPES.map((item) => '  ' + item), '}'].join('\n') + '\n';
-
 // http 块的默认内容，也是全局配置弹框的预填值
 const buildDefaultHttpBody = () =>
   [
-    '  include       mime.types;',
     '  default_type  application/octet-stream;',
     '',
     "  log_format  main  '$remote_addr - $remote_user [$time_local] \"$request\" '",
@@ -124,4 +101,4 @@ const buildMainConfig = (state) => {
   return lines.join('\n');
 };
 
-module.exports = { buildMainConfig, buildDefaultHttpBody, buildMimeTypes, resolvePort, DEFAULT_PORT, MIME_TYPES };
+module.exports = { buildMainConfig, buildDefaultHttpBody, resolvePort, DEFAULT_PORT };

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildMainConfig, buildDefaultHttpBody, buildMimeTypes, resolvePort, DEFAULT_PORT } = require('./configBuilder');
+const { buildMainConfig, buildDefaultHttpBody, resolvePort, DEFAULT_PORT } = require('./configBuilder');
 
 const baseState = (overrides = {}) => ({
   nginx: {
@@ -129,19 +129,13 @@ test('未自定义时 http 块不含任何内置内容', () => {
 });
 
 
-test('默认 http 内容使用 include mime.types', () => {
+test('默认 http 内容为常规配置且不依赖外部文件', () => {
   const body = buildDefaultHttpBody();
-  assert.match(body, /include\s+mime\.types;/);
+  assert.match(body, /default_type\s+application\/octet-stream;/);
   assert.match(body, /log_format\s+main/);
   assert.match(body, /client_max_body_size 1000M;/);
-  assert.doesNotMatch(body, /types \{/, '不再内联 types 块');
-});
-
-test('mime.types 文件内容可被 include', () => {
-  const content = buildMimeTypes();
-  assert.match(content, /^types \{/);
-  assert.match(content, /text\/html html htm;/);
-  assert.ok(content.trimEnd().endsWith('}'));
+  assert.doesNotMatch(body, /include/, '不引用 mime.types 等外部文件');
+  assert.doesNotMatch(body, /types \{/, '不内联 types 块');
 });
 
 test('访问日志开关关闭时不生成 access_log', () => {
