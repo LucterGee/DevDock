@@ -70,6 +70,53 @@ const buildDefaultHttpBody = (nginx) => {
   ].join('\n');
 };
 
+// 取一行开头的指令名，用于判断用户是否自定义了同名指令
+const directiveNameOf = (line) => {
+  const match = String(line).trim().match(/^([a-z_]+)[\s{]/);
+  return match ? match[1] : '';
+};
+
+// 去掉公共缩进后再统一加两格，避免用户已有的空格被叠加
+const indentBlock = (text) => {
+  const lines = String(text).split('\n');
+  const indents = lines
+    .filter((line) => line.trim())
+    .map((line) => (line.match(/^[ \t]*/) || [''])[0].length);
+  const common = indents.length ? Math.min(...indents) : 0;
+  return lines
+    .map((line) => (line.trim() ? '  ' + line.slice(common) : ''))
+    .join('\n');
+};
+
+// 默认内容 + 用户追加的内容；用户写了同名指令时以用户的为准，避免重复指令报错
+const buildHttpBody = (nginx, customHttp) => {
+  const defaults = buildDefaultHttpBody(nginx);
+  if (!customHttp.trim()) return defaults;
+
+  const overridden = new Set(
+    customHttp.split('\n').map(directiveNameOf).filter(Boolean)
+  );
+
+  const kept = [];
+  let dropping = false;
+  for (const line of defaults.split('\n')) {
+    if (!line.trim()) {
+      if (!dropping) kept.push(line);
+      continue;
+    }
+    const name = directiveNameOf(line);
+    if (!name) {
+      // 续行（如 log_format 的后续引号行）跟随上一条指令
+      if (!dropping) kept.push(line);
+      continue;
+    }
+    dropping = overridden.has(name);
+    if (!dropping) kept.push(line);
+  }
+
+  return kept.join('\n').replace(/\n+$/, '') + '\n\n' + indentBlock(customHttp);
+};
+
 const buildMainConfig = (state) => {
   const nginx = (state && state.nginx) || {};
   const port = resolvePort(nginx);
@@ -79,13 +126,9 @@ const buildMainConfig = (state) => {
   const errorLogPath = (nginx.errorLog && nginx.errorLog.path) || path.posix.join(logDir, 'error.log');
 
   // 配置了全局配置就以它为准，http 块里除 server 外全部由用户掌控
-  const customHttp = typeof nginx.customHttp === 'string' ? nginx.customHttp.trim() : '';
-  // 用户只需写指令本身，缩进由生成时统一处理
-  const indentBlock = (text) =>
-    text.split('\n').map((line) => (line.trim() ? '  ' + line : '')).join('\n');
-  const httpBody = customHttp
-    ? indentBlock(customHttp)
-    : buildDefaultHttpBody({ ...nginx, prefixDir: prefix, logDir, routesDir });
+  // 这里不能整体 trim：那会只去掉首行缩进，导致公共缩进算错
+  const customHttp = typeof nginx.customHttp === 'string' ? nginx.customHttp : '';
+  const httpBody = buildHttpBody({ ...nginx, prefixDir: prefix, logDir, routesDir }, customHttp);
 
   const lines = [
     '# 由 DevDock 生成，请勿手工修改；',

@@ -3,7 +3,6 @@ const { locationToRoute } = require('./generator');
 const { createNginxStore } = require('./routeStore');
 const { createNginxController } = require('./controller');
 const { findMissingVariables } = require('./variables');
-const { buildDefaultHttpBody } = require('./configBuilder');
 
 const sortRoutes = (routes) => [...routes].sort((a, b) => String(a.path).localeCompare(String(b.path)));
 
@@ -25,8 +24,6 @@ const createNginxRuntime = (options = {}) => {
     const variables = (current.nginx && current.nginx.variables) || [];
     return {
       state: current,
-      // 设置里「全局配置」未自定义时用它做初始值
-      defaultHttpConfig: buildDefaultHttpBody((current && current.nginx) || {}),
       status,
       routes: sortRoutes(current.routes || []),
       conflicts: scan.edited.map((item) => ({ id: item.id, path: item.path })),

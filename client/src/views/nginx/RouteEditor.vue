@@ -143,17 +143,6 @@ const submit = () => {
         </label>
 
         <label class="block">
-          <span class="mb-1 block text-xs text-gray-400">类型</span>
-          <select
-            v-model="draft.kind"
-            class="w-full rounded border border-gray-700 bg-surface-sunken px-3 py-2 text-xs text-gray-100 focus:border-blue-500 focus:outline-none"
-          >
-            <option value="proxy">代理</option>
-            <option value="raw">原始块</option>
-          </select>
-        </label>
-
-        <label class="block">
           <span class="mb-1 block text-xs text-gray-400">备注</span>
           <input
             v-model="draft.note"
@@ -161,7 +150,6 @@ const submit = () => {
           />
         </label>
 
-        <template v-if="draft.kind === 'proxy'">
         <div class="border-t border-gray-700 pt-4">
           <span class="mb-2 block text-xs text-gray-400">固定头</span>
           <div class="space-y-1.5">
@@ -291,20 +279,6 @@ const submit = () => {
             <Plus class="h-3.5 w-3.5" />新增候选
           </button>
         </div>
-        </template>
-
-        <template v-else>
-          <label class="block border-t border-gray-700 pt-4">
-            <span class="mb-1 block text-xs text-gray-400">location 块内容</span>
-            <textarea
-              v-model="draft.rawBody"
-              rows="10"
-              spellcheck="false"
-              class="w-full resize-y rounded border border-gray-700 bg-surface-sunken px-3 py-2 font-mono text-xs leading-relaxed text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
-              placeholder="proxy_pass http://127.0.0.1:8080;"
-            ></textarea>
-          </label>
-        </template>
       </div>
 
       <div class="flex justify-end gap-2 border-t border-gray-700 p-4">

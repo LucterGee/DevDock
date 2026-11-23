@@ -67,7 +67,6 @@ const load = async () => {
   variables.value = overview.variables || []
   missingVariables.value = overview.missingVariables || []
   nginxSettings.value = (overview.state as any)?.nginx || null
-  defaultHttpConfig.value = (overview as any).defaultHttpConfig || ''
   if (!routes.value.some((route) => route.id === selectedId.value)) {
     selectedId.value = routes.value[0]?.id || ''
     addingTarget.value = false
@@ -266,7 +265,6 @@ const exportConfig = () => run(async () => {
 
 const settingsOpen = ref(false)
 const nginxSettings = ref<any>(null)
-const defaultHttpConfig = ref('')
 const settingsDraft = ref({
   port: 18080,
   routesDir: '',
@@ -275,7 +273,7 @@ const settingsDraft = ref({
   accessLogPath: ''
 })
 
-// --- 全局配置（http 级）独立编辑层 ---
+// --- 全局配置独立编辑层 ---
 const httpConfigOpen = ref(false)
 const httpConfigDraft = ref('')
 const httpConfigRef = ref<HTMLTextAreaElement | null>(null)
@@ -288,7 +286,7 @@ const lineNumbers = computed(() => {
 
 const openHttpConfig = () => {
   const current = nginxSettings.value || {}
-  httpConfigDraft.value = current.customHttp || defaultHttpConfig.value
+  httpConfigDraft.value = current.customHttp || ''
   httpConfigOpen.value = true
 }
 
@@ -467,7 +465,6 @@ onMounted(() => run(load))
           <div class="space-y-3 rounded border border-gray-700 bg-surface-raised p-4">
             <div class="flex items-center gap-2">
               <span class="min-w-0 flex-1 truncate font-mono text-sm text-gray-100" :title="selected.path">{{ selected.path }}</span>
-              <span class="shrink-0 rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-gray-400">{{ selected.kind }}</span>
               <button
                 class="flex shrink-0 items-center gap-1.5 rounded border border-gray-700 bg-surface-raised px-2 py-1 text-xs text-red-400 transition hover:bg-surface-hover disabled:opacity-50"
                 :disabled="busy"
@@ -623,7 +620,7 @@ onMounted(() => run(load))
     <div v-if="httpConfigOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="httpConfigOpen = false">
       <div class="flex h-[82vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
         <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
-          <h3 class="text-sm font-semibold text-gray-100">全局配置（http 级）</h3>
+          <h3 class="text-sm font-semibold text-gray-100">全局配置</h3>
           <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="httpConfigOpen = false"><X class="h-4 w-4" /></button>
         </div>
         <div class="min-h-0 flex-1 p-4">
