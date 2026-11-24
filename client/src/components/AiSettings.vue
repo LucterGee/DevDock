@@ -125,7 +125,7 @@
               :class="currentView === 'reminder' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
             >
               <Timer class="w-3.5 h-3.5" />
-              <span class="text-sm font-medium">倒计时提醒</span>
+              <span class="text-sm font-medium" @dblclick.stop="sendTestNotification">倒计时提醒</span>
             </div>
             <div
               @click="showAppView"
@@ -676,10 +676,6 @@
                     class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 resize-none focus:border-amber-500 focus:outline-none transition"
                   ></textarea>
                 </div>
-
-                <div class="p-3 text-xs text-gray-400 border border-gray-700 rounded bg-surface-raised">
-                  只要应用仍在运行，提醒会通过系统通知发出；应用完全退出后不会继续倒计时。
-                </div>
               </div>
             </div>
           </template>
@@ -1048,6 +1044,22 @@ const showAppearanceView = () => {
   currentEditId.value = null;
   formData.value = null;
   isCreating.value = false;
+};
+
+// 双击侧边栏「倒计时提醒」发一条测试通知，用来确认系统通知是否真的能显示
+const sendTestNotification = () => {
+  const config = countdownReminderConfig.value;
+  socket.emit(
+    'notification:show',
+    {
+      title: config.title || '倒计时提醒',
+      body: config.body || '这是一条测试通知'
+    },
+    (result = {}) => {
+      if (result.success) window.$toast?.success?.('已发送测试通知');
+      else window.$toast?.warning?.(result.error || '系统通知不可用');
+    }
+  );
 };
 
 const showReminderView = () => {
