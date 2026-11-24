@@ -162,6 +162,14 @@
           </button>
 
           <button
+            @click="openBranchDialog(p)"
+            class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-sky-300 transition border rounded bg-sky-900/30 hover:bg-sky-600 hover:text-white border-sky-800/50"
+            title="切换或新建分支"
+          >
+            <GitBranch class="w-3.5 h-3.5" /> 分支
+          </button>
+
+          <button
             v-if="hasRunningScripts(p)"
             @click="$emit('stop', p)"
             title="强制杀死进程"
@@ -308,6 +316,13 @@
         </div>
       </div>
     </div>
+
+    <GitBranchDialog
+      v-if="branchProject"
+      :project-path="branchProject.path"
+      @close="closeBranchDialog"
+      @changed="closeBranchDialog"
+    />
   </div>
 </template>
 
@@ -316,8 +331,9 @@ import { ref, computed, nextTick } from 'vue';
 import { isImeComposing } from '../utils/ime';
 import { useEscapeKey } from '../utils/useEscapeKey';
 import TerminalView from './TerminalView.vue'
+import GitBranchDialog from './GitBranchDialog.vue'
 import { callKuyepClaude } from '../utils/ai' // 引入通用的 AI 工具
-import { FolderOpen, Sparkles, Skull, Loader2 } from 'lucide-vue-next';
+import { FolderOpen, Sparkles, Skull, Loader2, GitBranch } from 'lucide-vue-next';
 import { socket } from "../utils/socket";
 import { useAiConfig } from '../utils/useAiConfig';
 
@@ -484,6 +500,10 @@ const handleRunCommand = (project) => {
 
 // Git 状态
 const showGitModal = ref(false);
+// 分支管理弹窗对应的项目；为 null 时不显示
+const branchProject = ref(null);
+const openBranchDialog = (project) => { branchProject.value = project; };
+const closeBranchDialog = () => { branchProject.value = null; };
 useEscapeKey(() => { showGitModal.value = false; }, () => showGitModal.value);
 const isGenerating = ref(false);
 const isCommitting = ref(false);

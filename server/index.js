@@ -14,6 +14,7 @@ const nodeManager = require('./services/node/manager');
 const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveConfigPath } = require('./utils/appPaths');
+const gitBranches = require('./utils/gitBranches');
 const { expandHome } = require('./utils/pathUtils');
 const { isAvailable: isSecretStorageAvailable } = require('./utils/secretStore');
 const { openAiConfigList, sealAiConfigList, migratePlaintextSecrets } = require('./utils/aiSecrets');
@@ -1638,6 +1639,34 @@ if ($folder) { $folder.Self.Path }
   });
 
   // 1. 获取 Git 变更 (用于发给 AI)
+  // --- 分支管理 ---
+  socket.on('git:branches', async ({ projectPath, fetch } = {}, callback) => {
+    try {
+      const result = await gitBranches.listBranches(projectPath, { fetch: fetch !== false });
+      callback({ success: true, ...result });
+    } catch (error) {
+      callback({ success: false, error: error.message });
+    }
+  });
+
+  socket.on('git:checkout', async ({ projectPath, branch, isRemote } = {}, callback) => {
+    try {
+      const current = await gitBranches.checkoutBranch(projectPath, branch, { isRemote: Boolean(isRemote) });
+      callback({ success: true, current });
+    } catch (error) {
+      callback({ success: false, error: error.message });
+    }
+  });
+
+  socket.on('git:create-branch', async ({ projectPath, branch } = {}, callback) => {
+    try {
+      const current = await gitBranches.createBranch(projectPath, branch);
+      callback({ success: true, current });
+    } catch (error) {
+      callback({ success: false, error: error.message });
+    }
+  });
+
   socket.on('git:get-diff', ({ projectPath }, callback) => {
     // 获取未暂存和已暂存的所有变更
     // 限制 3000 字符，防止 Token 爆炸
