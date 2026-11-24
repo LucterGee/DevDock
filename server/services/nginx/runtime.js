@@ -5,8 +5,6 @@ const { createNginxController } = require('./controller');
 const { findMissingVariables } = require('./variables');
 const { buildDefaultHttpBody } = require('./configBuilder');
 
-const sortRoutes = (routes) => [...routes].sort((a, b) => String(a.path).localeCompare(String(b.path)));
-
 const EXPORT_FORMAT = 'devdock-nginx';
 const EXPORT_VERSION = 1;
 
@@ -28,7 +26,8 @@ const createNginxRuntime = (options = {}) => {
       // 全局配置弹框未自定义时用它预填
       defaultHttpConfig: buildDefaultHttpBody((current && current.nginx) || {}),
       status,
-      routes: sortRoutes(current.routes || []),
+      // 按存储顺序返回，顺序由用户在界面上拖拽决定
+      routes: current.routes || [],
       conflicts: scan.edited.map((item) => ({ id: item.id, path: item.path })),
       untracked: scan.untracked,
       variables,
@@ -57,6 +56,27 @@ const createNginxRuntime = (options = {}) => {
     else routes.push(route);
     save({ ...current, routes });
     return route;
+  };
+
+  // 按传入的 id 顺序重排路由；未出现的路由按原相对顺序附在末尾
+  const reorderRoutes = (orderedIds) => {
+    const current = state();
+    const routes = Array.isArray(current.routes) ? current.routes : [];
+    const byId = new Map(routes.map((route) => [route.id, route]));
+    const next = [];
+
+    for (const id of Array.isArray(orderedIds) ? orderedIds : []) {
+      const route = byId.get(id);
+      if (!route) continue;
+      next.push(route);
+      byId.delete(id);
+    }
+    for (const route of routes) {
+      if (byId.has(route.id)) next.push(route);
+    }
+
+    save({ ...current, routes: next });
+    return next;
   };
 
   const removeRoute = (id) => {
@@ -229,6 +249,7 @@ const createNginxRuntime = (options = {}) => {
     validateImportPayload,
     upsertRoute,
     removeRoute,
+    reorderRoutes,
     setActiveTarget,
     addTarget,
     removeTarget,
@@ -242,4 +263,4 @@ const createNginxRuntime = (options = {}) => {
   };
 };
 
-module.exports = { createNginxRuntime, sortRoutes, EXPORT_FORMAT, EXPORT_VERSION };
+module.exports = { createNginxRuntime, EXPORT_FORMAT, EXPORT_VERSION };

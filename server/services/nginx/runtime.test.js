@@ -61,12 +61,13 @@ const setup = () => {
   return { root, routesDir, store, controller, calls, runtime: createNginxRuntime({ store, controller }) };
 };
 
-test('overview 返回排序后的路由与状态', () => {
+test('overview 按存储顺序返回路由与状态', () => {
   const { runtime } = setup();
   seed(runtime);
   const view = runtime.overview();
   assert.equal(view.routes.length, 2);
-  assert.deepEqual(view.routes.map((r) => r.path), ['/api/', '/teacher']);
+  // 顺序由界面拖拽决定，不再按路径排序
+  assert.deepEqual(view.routes.map((r) => r.path), ['/teacher', '/api/']);
   assert.equal(view.status.installed, true);
   assert.deepEqual(view.conflicts, []);
 });
@@ -131,3 +132,40 @@ test('restart 先停后启', async () => {
   await runtime.restart();
   assert.deepEqual(calls.filter((c) => c === 'stop' || c === 'start'), ['stop', 'start']);
 });
+
+test('reorderRoutes 按传入顺序重排并持久化', async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'devdock-order-'));
+  const { createNginxStore } = require('./routeStore');
+  const { createNginxRuntime } = require('./runtime');
+
+  const store = createNginxStore({
+    statePath: path.join(dir, 'nginx.json'),
+    routesDir: path.join(dir, 'routes'),
+    prefixDir: dir,
+    logDir: path.join(dir, 'logs'),
+  });
+  const runtime = createNginxRuntime({ store, controller: { ensureConfig: () => {}, status: () => ({}) } });
+
+  store.save({
+    version: 1,
+    nginx: { port: 18080, prefixDir: dir, routesDir: path.join(dir, 'routes'), logDir: path.join(dir, 'logs'), variables: [] },
+    routes: [
+      { id: 'a', path: '/a', kind: 'proxy', targets: [{ id: 't1', proxyPass: 'http://127.0.0.1:1' }], activeTargetId: 't1' },
+      { id: 'b', path: '/b', kind: 'proxy', targets: [{ id: 't2', proxyPass: 'http://127.0.0.1:2' }], activeTargetId: 't2' },
+      { id: 'c', path: '/c', kind: 'proxy', targets: [{ id: 't3', proxyPass: 'http://127.0.0.1:3' }], activeTargetId: 't3' },
+    ],
+  });
+
+  runtime.reorderRoutes(['c', 'a', 'b']);
+  assert.deepEqual(runtime.overview().routes.map((item) => item.id), ['c', 'a', 'b']);
+
+  // 未列出的路由按原顺序附在末尾
+  runtime.reorderRoutes(['b']);
+  assert.deepEqual(runtime.overview().routes.map((item) => item.id), ['b', 'c', 'a']);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+

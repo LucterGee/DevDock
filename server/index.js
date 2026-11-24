@@ -2070,6 +2070,11 @@ if ($folder) { $folder.Self.Path }
     return saved;
   }));
 
+  socket.on('nginx:routes:reorder', ({ ids } = {}, callback) => nginxGuard(callback, () => {
+    const routes = nginxRuntime.reorderRoutes(ids);
+    nginxRuntime.apply();
+    return routes;
+  }));
   socket.on('nginx:route:remove', ({ id }, callback) => nginxGuard(callback, () => {
     const removed = nginxRuntime.removeRoute(id);
     nginxRuntime.apply();

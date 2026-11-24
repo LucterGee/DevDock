@@ -42,6 +42,46 @@ const runStateLabel = computed(() => {
 
 const selected = computed(() => routes.value.find((route) => route.id === selectedId.value) || null)
 const conflict = computed(() => conflicts.value.find((item) => item.id === selectedId.value) || null)
+// --- 路由拖拽排序 ---
+const dragId = ref('')
+const dragOverId = ref('')
+// 搜索时列表是子集，拖拽会打乱真实顺序，因此禁用
+const canDrag = computed(() => !search.value.trim())
+
+const onRouteDragStart = (route: NginxRoute, event: DragEvent) => {
+  if (!canDrag.value) return
+  dragId.value = route.id
+  event.dataTransfer?.setData('text/plain', route.id)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+const onRouteDragOver = (route: NginxRoute) => {
+  if (!canDrag.value || !dragId.value || dragId.value === route.id) return
+  dragOverId.value = route.id
+}
+
+const onRouteDragEnd = () => {
+  dragId.value = ''
+  dragOverId.value = ''
+}
+
+const onRouteDrop = (target: NginxRoute) => {
+  const from = routes.value.findIndex((item) => item.id === dragId.value)
+  const to = routes.value.findIndex((item) => item.id === target.id)
+  onRouteDragEnd()
+  if (from < 0 || to < 0 || from === to) return
+
+  const next = [...routes.value]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  routes.value = next
+
+  run(async () => {
+    await nginxCall('nginx:routes:reorder', { ids: next.map((item) => item.id) })
+    await load()
+  })
+}
+
 const filtered = computed(() => {
   const keyword = search.value.trim().toLowerCase()
   if (!keyword) return routes.value
@@ -432,9 +472,19 @@ onMounted(() => run(load))
           <div
             v-for="route in filtered"
             :key="route.id"
-            class="flex cursor-pointer items-center gap-2 border-b border-gray-700/60 px-3 py-2 transition hover:bg-surface-hover"
-            :class="route.id === selectedId ? 'bg-surface-hover' : ''"
+            :draggable="canDrag"
+            class="flex items-center gap-2 border-b border-gray-700/60 px-3 py-2 transition hover:bg-surface-hover"
+            :class="[
+              route.id === selectedId ? 'bg-surface-hover' : '',
+              canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+              route.id === dragId ? 'opacity-40' : '',
+              route.id === dragOverId ? 'border-t-2 border-t-blue-500' : ''
+            ]"
             @click="select(route.id)"
+            @dragstart="onRouteDragStart(route, $event)"
+            @dragover.prevent="onRouteDragOver(route)"
+            @dragend="onRouteDragEnd"
+            @drop.prevent="onRouteDrop(route)"
           >
             <div class="min-w-0 flex-1">
               <div class="truncate font-mono text-xs text-gray-100" :title="route.path">{{ route.path }}</div>
