@@ -2064,23 +2064,24 @@ if ($folder) { $folder.Self.Path }
     }
   };
 
-  // 写盘 + 校验 + 重载，任一步失败都返回明细由前端提示
+  // 写盘 + 校验 + 重载；失败时广播给前端提示，避免改动「看起来生效了其实没有」
+  const applyConfig = async (options = {}) => {
+    const applied = await nginxRuntime.apply({ force: options.force || [] });
+    if (applied.error) {
+      console.warn('⚠️ nginx 配置已写入但未生效:', applied.error);
+      io.emit('nginx:apply-error', { error: applied.error });
+    }
+    return applied;
+  };
+
   const nginxSync = async (options = {}) => {
-    const applied = nginxRuntime.apply({ force: options.force || [] });
-    const testResult = await nginxRuntime.validate();
-    if (!testResult.ok) {
-      return { applied, tested: false, reloaded: false, error: testResult.error || '配置校验失败' };
-    }
-    const status = nginxRuntime.controller.status();
-    if (!status.running) {
-      return { applied, tested: true, reloaded: false, reason: 'not-running' };
-    }
-    const reloadResult = await nginxRuntime.reload();
+    const applied = await applyConfig({ force: options.force || [] });
     return {
       applied,
-      tested: true,
-      reloaded: reloadResult.ok,
-      error: reloadResult.ok ? '' : reloadResult.error || '重载失败',
+      tested: applied.tested,
+      reloaded: applied.reloaded,
+      reason: applied.running ? undefined : 'not-running',
+      error: applied.error,
     };
   };
 
@@ -2088,63 +2089,63 @@ if ($folder) { $folder.Self.Path }
 
   socket.on('nginx:export', (callback) => nginxGuard(callback, () => nginxRuntime.exportPayload()));
 
-  socket.on('nginx:import-json', ({ payload }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:import-json', ({ payload }, callback) => nginxGuardAsync(callback, async () => {
     const result = nginxRuntime.importPayload(payload);
     if (!result.ok) throw new Error(result.error);
-    nginxRuntime.apply();
+    await applyConfig();
     return result;
   }));
 
-  socket.on('nginx:route:save', ({ route }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:route:save', ({ route }, callback) => nginxGuardAsync(callback, async () => {
     const saved = nginxRuntime.upsertRoute(route);
-    nginxRuntime.apply();
+    await applyConfig();
     return saved;
   }));
 
-  socket.on('nginx:routes:reorder', ({ ids } = {}, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:routes:reorder', ({ ids } = {}, callback) => nginxGuardAsync(callback, async () => {
     const routes = nginxRuntime.reorderRoutes(ids);
-    nginxRuntime.apply();
+    await applyConfig();
     return routes;
   }));
-  socket.on('nginx:route:remove', ({ id }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:route:remove', ({ id }, callback) => nginxGuardAsync(callback, async () => {
     const removed = nginxRuntime.removeRoute(id);
-    nginxRuntime.apply();
+    await applyConfig();
     return { removed };
   }));
 
 
-  socket.on('nginx:target:add', ({ routeId, target }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:target:add', ({ routeId, target }, callback) => nginxGuardAsync(callback, async () => {
     const route = nginxRuntime.addTarget(routeId, target);
-    nginxRuntime.apply();
+    await applyConfig();
     return route;
   }));
 
-  socket.on('nginx:target:remove', ({ routeId, targetId }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:target:remove', ({ routeId, targetId }, callback) => nginxGuardAsync(callback, async () => {
     const route = nginxRuntime.removeTarget(routeId, targetId);
-    nginxRuntime.apply();
+    await applyConfig();
     return route;
   }));
 
-  socket.on('nginx:target:active', ({ routeId, targetId }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:target:active', ({ routeId, targetId }, callback) => nginxGuardAsync(callback, async () => {
     const route = nginxRuntime.setActiveTarget(routeId, targetId);
-    nginxRuntime.apply();
+    await applyConfig();
     return route;
   }));
 
-  socket.on('nginx:conflict:resolve', ({ id, action }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:conflict:resolve', ({ id, action }, callback) => nginxGuardAsync(callback, async () => {
     const result = nginxRuntime.resolveConflict(id, action);
-    nginxRuntime.apply();
+    await applyConfig();
     return result;
   }));
 
-  socket.on('nginx:settings:save', ({ nginx }, callback) => nginxGuard(callback, () => {
+  socket.on('nginx:settings:save', ({ nginx }, callback) => nginxGuardAsync(callback, async () => {
     const state = nginxRuntime.store.load();
     const incoming = { ...(nginx || {}) };
     if (incoming.routesDir) incoming.routesDir = expandHome(incoming.routesDir);
     if (incoming.logDir) incoming.logDir = expandHome(incoming.logDir);
     state.nginx = { ...state.nginx, ...incoming };
     nginxRuntime.store.save(state);
-    nginxRuntime.apply();
+    await applyConfig();
     return state.nginx;
   }));
 

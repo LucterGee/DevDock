@@ -93,15 +93,45 @@ test('目标增删与切换写入状态', () => {
   assert.notEqual(afterRemove.activeTargetId, newTargetId);
 });
 
-test('apply 写配置并同步全部路由文件', () => {
+test('apply 写配置并同步全部路由文件', async () => {
   const { runtime, routesDir, calls } = setup();
   seed(runtime);
 
-  const result = runtime.apply();
+  const result = await runtime.apply();
   assert.equal(calls.includes('writeConfig'), true);
   assert.equal(result.written.length, 2);
   const files = fs.readdirSync(routesDir).filter((name) => name.endsWith('.conf'));
   assert.equal(files.length, 2);
+  // nginx 未运行时不校验也不重载
+  assert.equal(result.running, false);
+  assert.equal(calls.includes('reload'), false);
+});
+
+test('nginx 运行中时 apply 会校验并重载', async () => {
+  const { runtime, controller, calls } = setup();
+  seed(runtime);
+  controller.status = () => ({ installed: true, running: true, pid: 1, port: 18080 });
+
+  const result = await runtime.apply();
+  assert.equal(result.running, true);
+  assert.equal(result.tested, true);
+  assert.equal(result.reloaded, true);
+  assert.equal(result.error, '');
+  assert.equal(calls.includes('test'), true);
+  assert.equal(calls.includes('reload'), true);
+});
+
+test('校验失败时 apply 不重载并返回错误', async () => {
+  const { runtime, controller, calls } = setup();
+  seed(runtime);
+  controller.status = () => ({ installed: true, running: true, pid: 1, port: 18080 });
+  controller.test = async () => { calls.push('test'); return { ok: false, error: 'bad config' }; };
+
+  const result = await runtime.apply();
+  assert.equal(result.tested, false);
+  assert.equal(result.reloaded, false);
+  assert.equal(result.error, 'bad config');
+  assert.equal(calls.includes('reload'), false);
 });
 
 test('removeRoute 删除路由', () => {

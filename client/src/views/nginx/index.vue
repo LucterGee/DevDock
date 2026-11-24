@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Braces, Download, FileCode, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import { ensureHomeDir, toDisplayPath } from '../../utils/pathDisplay'
+import { socket } from '../../utils/socket'
 import { useEscapeKey } from '../../utils/useEscapeKey'
 import RouteEditor from './RouteEditor.vue'
 import VariablesDialog from './VariablesDialog.vue'
@@ -459,7 +460,19 @@ const openPath = (which: 'prefix' | 'routes' | 'logs' | 'conf') => run(async () 
   await nginxCall('nginx:open-path', { which })
 })
 
-onMounted(() => run(load))
+// 配置写盘后若校验或重载失败，nginx 仍在跑旧配置，需要明确告知
+const onApplyError = (payload: { error?: string } = {}) => {
+  window.$toast?.warning?.('配置已保存但未生效：' + (payload.error || '未知错误'))
+}
+
+onMounted(() => {
+  run(load)
+  socket.on('nginx:apply-error', onApplyError)
+})
+
+onUnmounted(() => {
+  socket.off('nginx:apply-error', onApplyError)
+})
 </script>
 
 <template>

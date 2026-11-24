@@ -202,11 +202,31 @@ const createNginxRuntime = (options = {}) => {
   };
 
   // 把状态落到磁盘：写配置 + 同步路由文件
-  const apply = (options2 = {}) => {
+  // 写盘后必须重载，否则 nginx 仍在用内存里的旧配置，界面上的改动不会生效
+  const apply = async (options2 = {}) => {
     const current = state();
     const { confPath } = controller.writeConfig();
     const result = store.sync(current, { force: options2.force || [] });
-    return { confPath, ...result };
+
+    const running = controller.status().running;
+    let tested = false;
+    let reloaded = false;
+    let error = '';
+
+    if (running) {
+      // 先校验再重载，避免把坏配置推上去
+      const testResult = await controller.test();
+      tested = Boolean(testResult.ok);
+      if (!testResult.ok) {
+        error = testResult.error || '配置校验失败';
+      } else {
+        const reloadResult = await controller.reload();
+        reloaded = Boolean(reloadResult.ok);
+        if (!reloadResult.ok) error = reloadResult.error || '重载失败';
+      }
+    }
+
+    return { confPath, ...result, running, tested, reloaded, error };
   };
 
   const validate = () => controller.test();
