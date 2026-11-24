@@ -99,6 +99,11 @@ const addTarget = () => {
   if (!draft.value.activeTargetId) draft.value.activeTargetId = id
 }
 
+const selectTarget = (id: string) => {
+  if (!id) return
+  draft.value.activeTargetId = id
+}
+
 const removeTarget = (index: number) => {
   const [removed] = draft.value.targets.splice(index, 1)
   if (removed && draft.value.activeTargetId === removed.id) {
@@ -216,7 +221,11 @@ const submit = () => {
             <div
               v-for="(target, index) in draft.targets"
               :key="target.id || index"
-              class="rounded border border-gray-700 bg-surface-raised p-2"
+              class="cursor-pointer rounded border bg-surface-raised p-2 transition"
+              :class="target.id === draft.activeTargetId
+                ? 'border-blue-500/60'
+                : 'border-gray-700 hover:border-gray-600'"
+              @click="selectTarget(target.id)"
             >
               <div class="flex items-center gap-2">
                 <input
@@ -263,7 +272,7 @@ const submit = () => {
                 <button
                   class="shrink-0 rounded p-1 text-gray-500 transition hover:bg-surface-hover hover:text-red-400"
                   title="删除候选"
-                  @click="removeTarget(index)"
+                  @click.stop="removeTarget(index)"
                 ><X class="h-3.5 w-3.5" /></button>
               </div>
               <div v-if="menuIndex === index" class="mt-2 flex flex-wrap gap-1 border-t border-gray-700 pt-2">
