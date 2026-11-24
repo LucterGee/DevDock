@@ -199,6 +199,7 @@
         <div class="px-4 py-3 border-t border-gray-700/50 bg-surface-sunken">
           <div class="flex gap-2">
             <input
+              :ref="(el) => setCommandInputRef(p.path, el)"
               :value="p.commandRunning ? p.runningCommand : getCommandInput(p.path)"
               :disabled="p.commandRunning"
               @input="handleCommandInput(p.path, $event.target.value)"
@@ -352,6 +353,17 @@ const emit = defineEmits([
 ])
 
 const commandInputs = ref({})
+// 命令输入框的 DOM 引用，执行后用来把焦点放回去
+const commandInputRefs = ref({})
+
+const setCommandInputRef = (projectPath, el) => {
+  if (el) commandInputRefs.value[projectPath] = el
+  else delete commandInputRefs.value[projectPath]
+}
+
+const focusCommandInput = (projectPath) => {
+  nextTick(() => commandInputRefs.value[projectPath]?.focus())
+}
 
 // 折叠面板：同一时间最多展开一个项目
 const expandedPath = ref('')
@@ -463,6 +475,10 @@ const handleRunCommand = (project) => {
   if (!command) return
   pushHistory(project.path, command)
   emit('run-command', { project, command })
+
+  // 执行后清空输入并保持焦点，方便直接敲下一条
+  setCommandInput(project.path, '')
+  focusCommandInput(project.path)
 }
 
 // Git 状态

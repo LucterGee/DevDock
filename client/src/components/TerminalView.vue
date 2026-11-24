@@ -496,9 +496,34 @@ const stopWheelChaining = (event) => {
 
 // --- xterm 初始化 ---
 // 两套 xterm 配色：深色沿用原配色，浅色白底深字
+// 带上 ANSI 调色板：命令行走青色、状态行走灰色，浅色主题下用加深版本保证对比度
 const xtermThemes = {
-  dark: { background: '#0f172a', foreground: '#cbd5e1', cursor: '#38bdf8', selectionBackground: '#3b82f64d' },
-  light: { background: '#ffffff', foreground: '#0f172a', cursor: '#2563eb', selectionBackground: '#3b82f633' }
+  dark: {
+    background: '#0f172a',
+    foreground: '#cbd5e1',
+    cursor: '#38bdf8',
+    selectionBackground: '#3b82f64d',
+    cyan: '#22d3ee',
+    yellow: '#facc15',
+    red: '#f87171',
+    green: '#4ade80',
+    blue: '#60a5fa',
+    magenta: '#e879f9',
+    brightBlack: '#64748b'
+  },
+  light: {
+    background: '#ffffff',
+    foreground: '#0f172a',
+    cursor: '#2563eb',
+    selectionBackground: '#3b82f633',
+    cyan: '#0e7490',
+    yellow: '#b45309',
+    red: '#b91c1c',
+    green: '#15803d',
+    blue: '#2563eb',
+    magenta: '#7e22ce',
+    brightBlack: '#64748b'
+  }
 };
 // 每次返回新对象：xterm 对 theme 这类对象选项按引用判断变更
 const currentXtermTheme = () => ({ ...(xtermThemes[resolvedTheme.value] || xtermThemes.dark) });

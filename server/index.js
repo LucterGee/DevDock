@@ -181,16 +181,9 @@ const emitCommandStatus = (projectPath, projectName, running, command = '') => {
   });
 };
 
-const formatCommandLogChunk = (chunk) => {
-  const text = String(chunk || '');
-  const lines = text.split('\n');
-
-  return lines.map((line, index) => {
-    const isLast = index === lines.length - 1;
-    if (isLast && line === '') return '';
-    return `[command] ${line}${isLast ? '' : '\n'}`;
-  }).join('');
-};
+// 命令输出原样透传，行首不再加 [command] 前缀；
+// 输入与输出的区分交给带颜色的命令行本身
+const formatCommandLogChunk = (chunk) => String(chunk || '');
 
 const normalizeTunnelConfig = (rawConfig) => {
   const source = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
@@ -1441,7 +1434,7 @@ if ($folder) { $folder.Self.Path }
 
     io.emit('log', {
       name: projectName,
-      data: `\n[command] $ ${trimmedCommand}${targetNodeVersion ? `  (Node v${targetNodeVersion})` : ''}\n`
+      data: `\n\x1b[36m$ ${trimmedCommand}\x1b[0m${targetNodeVersion ? `  \x1b[90m(Node v${targetNodeVersion})\x1b[0m` : ''}\n`
     });
 
     const appendCommandLog = (data) => {
@@ -1471,13 +1464,13 @@ if ($folder) { $folder.Self.Path }
 
     child.on('error', (err) => {
       finalizeCommand({
-        logMessage: `\n[command] 启动失败: ${err.message}\n`
+        logMessage: `\x1b[31m启动失败: ${err.message}\x1b[0m\n`
       });
     });
 
     child.on('close', (code) => {
       finalizeCommand({
-        logMessage: `\n[command] exited with code ${code}\n`
+        logMessage: `\x1b[90m进程退出，code ${code}\x1b[0m\n`
       });
     });
 
@@ -1498,7 +1491,7 @@ if ($folder) { $folder.Self.Path }
     emitCommandStatus(projectPath, entry.projectName, false, entry.command);
     io.emit('log', {
       name: entry.projectName,
-      data: '\n[command] stop signal sent\n'
+      data: '\x1b[90m已发送停止信号\x1b[0m\n'
     });
     killProcessTree(entry.child, `command:${entry.projectName}`);
     callback?.({ success: true });
