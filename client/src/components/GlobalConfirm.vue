@@ -1,6 +1,6 @@
 <template>
   <Transition name="fade">
-    <div v-if="state.visible" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div v-if="state.visible" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm" @mousedown.self="handleAction(false)">
       
       <div 
         class="w-full max-w-md bg-surface border border-gray-700 rounded-lg shadow-2xl overflow-hidden scale-in"

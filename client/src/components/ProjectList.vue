@@ -73,6 +73,13 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             </button>
             <button
+              @click.stop="copyProjectPath(p.path)"
+              title="复制项目路径"
+              class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-blue-400"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+            </button>
+            <button
               @click.stop="$emit('toggle-hide', p)"
               :title="!isHidden(p.path) ? '隐藏' : '退出隐藏'"
               class="p-1.5 text-gray-500 transition rounded hover:bg-gray-700 hover:text-red-400"
@@ -265,11 +272,16 @@
       </div>
     </div>
 
-    <div v-if="showGitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div v-if="showGitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="showGitModal = false">
       <div class="w-full max-w-lg p-6 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl">
-        <h3 class="flex items-center gap-2 mb-4 text-lg font-bold text-purple-400">
-          <Sparkles class="w-4 h-4" /> AI 智能提交
-        </h3>
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="flex items-center gap-2 text-lg font-bold text-purple-400">
+            <Sparkles class="w-4 h-4" /> AI 智能提交
+          </h3>
+          <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="showGitModal = false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
         
         <div v-if="isGenerating" class="flex flex-col items-center justify-center h-32 space-y-3">
           <div class="w-8 h-8 border-4 border-purple-500 rounded-full border-t-transparent animate-spin"></div>
@@ -498,6 +510,19 @@ const handleRunCommand = (project) => {
 const showGitModal = ref(false);
 // 分支管理弹窗对应的项目；为 null 时不显示
 const branchProject = ref(null);
+const copyProjectPath = async (projectPath) => {
+  if (!navigator?.clipboard?.writeText) {
+    window.$toast?.warning?.('当前环境不支持复制');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(projectPath);
+    window.$toast?.success?.('已复制项目路径');
+  } catch (error) {
+    window.$toast?.warning?.('复制失败：' + (error?.message || '未知错误'));
+  }
+};
+
 const openBranchDialog = (project) => { branchProject.value = project; };
 const closeBranchDialog = () => { branchProject.value = null; };
 
