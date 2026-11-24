@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
+const { spawnSync } = require('child_process');
 
 const ROOT_PACKAGE_PATH = path.join(__dirname, '../../package.json');
 
@@ -47,12 +48,17 @@ const cloneState = () => ({ ...state });
 // macOS 的 Squirrel.Mac 在安装前会校验新包签名，未签名或 ad-hoc 签名
 // 必然失败（designated requirement 是当前二进制的 cdhash，新版本对不上）。
 // 这里通过 bundle 是否带签名清单判断能否在本机安装。
+// Squirrel.Mac 只接受带 Developer ID 证书的签名。
+// ad-hoc 签名同样会生成 _CodeSignature，但校验必然失败，
+// 所以这里要看证书而不是目录是否存在，否则会误判成可自动安装。
 const isBundleSigned = (electronAppInstance) => {
   if (process.platform !== 'darwin') return true;
   try {
     const exe = electronAppInstance.getPath('exe');
-    const contentsDir = path.dirname(path.dirname(exe));
-    return fs.existsSync(path.join(contentsDir, '_CodeSignature', 'CodeResources'));
+    const appPath = path.resolve(path.dirname(exe), '..', '..');
+    const result = spawnSync('codesign', ['-dv', '--verbose=2', appPath], { encoding: 'utf8' });
+    const detail = `${result.stdout || ''}${result.stderr || ''}`;
+    return /Authority=Developer ID Application/.test(detail);
   } catch (e) {
     return false;
   }
