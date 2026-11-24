@@ -260,10 +260,15 @@ const removeTarget = (targetId: string) => run(async () => {
   replaceRoute(await nginxCall<NginxRoute>('nginx:target:remove', { routeId: selected.value.id, targetId }))
 })
 
-const setActiveTarget = (targetId: string) => run(async () => {
+const setActiveTarget = (targetId: string) => {
   if (!selected.value) return
-  replaceRoute(await nginxCall<NginxRoute>('nginx:target:active', { routeId: selected.value.id, targetId }))
-})
+  // 已经是当前候选就不再请求；点整行时 radio 的 change 与行的 click 会同时触发
+  if (selected.value.activeTargetId === targetId) return
+  run(async () => {
+    if (!selected.value) return
+    replaceRoute(await nginxCall<NginxRoute>('nginx:target:active', { routeId: selected.value.id, targetId }))
+  })
+}
 
 const resolveConflict = (action: 'overwrite' | 'adopt') => run(async () => {
   if (!conflict.value) return
@@ -622,7 +627,9 @@ onUnmounted(() => {
               <div
                 v-for="target in selected.targets || []"
                 :key="target.id"
-                class="flex items-center gap-2 rounded px-2 py-1.5 transition hover:bg-surface-hover"
+                class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition hover:bg-surface-hover"
+                :class="target.id === selected.activeTargetId ? 'bg-blue-500/10' : ''"
+                @click="setActiveTarget(target.id)"
               >
                 <input
                   type="radio"
@@ -637,7 +644,7 @@ onUnmounted(() => {
                 <button
                   class="shrink-0 rounded p-1 text-gray-500 transition hover:bg-surface-hover hover:text-red-400"
                   title="删除候选"
-                  @click="removeTarget(target.id)"
+                  @click.stop="removeTarget(target.id)"
                 ><X class="h-3.5 w-3.5" /></button>
               </div>
             </div>
