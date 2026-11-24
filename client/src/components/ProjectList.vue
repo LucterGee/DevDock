@@ -51,21 +51,22 @@
           </div>
 
           <div class="flex items-center gap-1 shrink-0">
-            <div v-if="devScriptOf(p)" class="flex items-center rounded transition hover:bg-gray-700">
+            <div v-if="devScriptOf(p)" class="flex items-center gap-0.5">
+              <button
+                @click.stop="openDevPicker(p)"
+                :title="'当前开发脚本：' + devScriptOf(p) + '（点击更换）'"
+                class="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[10px] text-gray-400 transition hover:bg-gray-700 hover:text-gray-200"
+              >
+                <span class="max-w-[80px] truncate">{{ devScriptOf(p) }}</span>
+                <ChevronDown class="h-3 w-3 shrink-0" />
+              </button>
               <button
                 @click.stop="handleDevClick(p)"
                 :title="(isDevRunning(p) ? '停止开发：' : '启动开发：') + devScriptOf(p)"
-                class="rounded-l p-1.5 transition"
+                class="rounded p-1.5 transition"
                 :class="isDevRunning(p) ? 'text-green-400' : 'text-gray-500 hover:text-green-400'"
               >
                 <Play class="h-3.5 w-3.5" />
-              </button>
-              <button
-                @click.stop="openDevPicker(p)"
-                title="选择开发命令"
-                class="rounded-r py-1.5 pl-0.5 pr-1.5 text-gray-600 transition hover:text-gray-300"
-              >
-                <ChevronDown class="h-3 w-3" />
               </button>
             </div>
             <button
