@@ -3,14 +3,14 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const { resolveConfigPath } = require('../../utils/appPaths');
+const { APP_DIR, resolveConfigPath } = require('../../utils/appPaths');
 const { generateLocationBlock } = require('./generator');
 const { buildDefaultHttpBody } = require('./configBuilder');
 const { resolveRoute } = require('./variables');
 
 const HEADER_MARK = '# devdock:generated';
 const HEADER_END = '# devdock:header-end';
-const DEFAULT_PREFIX_DIR = path.join(os.homedir(), '.devdock', 'nginx');
+const DEFAULT_PREFIX_DIR = path.join(APP_DIR, 'nginx');
 const DEFAULT_ROUTE_DIR = path.join(DEFAULT_PREFIX_DIR, 'routes');
 const DEFAULT_LOG_DIR = path.join(DEFAULT_PREFIX_DIR, 'logs');
 const DEFAULT_BACKUP_DIR = path.join(DEFAULT_PREFIX_DIR, 'backups');

@@ -2,7 +2,10 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const APP_DIR = path.join(os.homedir(), '.devdock');
+// DEVDOCK_HOME 可指向临时目录，用于在不动真实配置的前提下跑测试环境
+const APP_DIR = process.env.DEVDOCK_HOME
+  ? path.resolve(process.env.DEVDOCK_HOME)
+  : path.join(os.homedir(), '.devdock');
 
 // 统一把配置收进 ~/.devdock；首次访问时把旧位置的同名文件迁移过来
 const resolveConfigPath = (fileName, legacyName) => {

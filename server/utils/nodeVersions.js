@@ -9,6 +9,7 @@
  */
 const fs = require('fs');
 const os = require('os');
+const { APP_DIR } = require('./appPaths');
 const path = require('path');
 const semver = require('semver');
 
@@ -43,7 +44,7 @@ function getNvmHome() {
  */
 // 应用自己下载的 Node 版本目录
 const getManagedVersionsBase = () => {
-  const dir = path.join(os.homedir(), '.devdock', 'node');
+  const dir = path.join(APP_DIR, 'node');
   return fs.existsSync(dir) ? dir : null;
 };
 

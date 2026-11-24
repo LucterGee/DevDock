@@ -4,6 +4,7 @@ const path = require('path');
 const net = require('net');
 const { execFile, execFileSync } = require('child_process');
 
+const { APP_DIR } = require('../../utils/appPaths');
 const { buildMainConfig, resolvePort } = require('./configBuilder');
 const { createNginxStore } = require('./routeStore');
 
@@ -130,7 +131,7 @@ const createNginxController = (options = {}) => {
   const paths = () => {
     const current = state();
     const nginx = current.nginx || {};
-    const prefixDir = options.prefixDir || nginx.prefixDir || path.join(os.homedir(), '.devdock', NGINX_DIR_NAME);
+    const prefixDir = options.prefixDir || nginx.prefixDir || path.join(APP_DIR, NGINX_DIR_NAME);
     return {
       prefixDir,
       confPath: path.join(prefixDir, 'nginx.conf'),

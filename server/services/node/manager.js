@@ -5,8 +5,9 @@ const https = require('https');
 const { spawn } = require('child_process');
 
 const nodeVersions = require('../../utils/nodeVersions');
+const { APP_DIR } = require('../../utils/appPaths');
 
-const MANAGED_DIR = path.join(os.homedir(), '.devdock', 'node');
+const MANAGED_DIR = path.join(APP_DIR, 'node');
 const TMP_DIR = path.join(MANAGED_DIR, '.tmp');
 const INDEX_URLS = ['https://npmmirror.com/mirrors/node/index.json', 'https://nodejs.org/dist/index.json'];
 const DOWNLOAD_BASES = ['https://npmmirror.com/mirrors/node', 'https://nodejs.org/dist'];
