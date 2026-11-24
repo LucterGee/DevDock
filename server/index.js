@@ -1435,7 +1435,7 @@ if ($folder) { $folder.Self.Path }
 
     io.emit('log', {
       name: projectName,
-      data: `\n\x1b[36m$ ${trimmedCommand}\x1b[0m${targetNodeVersion ? `  \x1b[90m(Node v${targetNodeVersion})\x1b[0m` : ''}\n`
+      data: `\n\x1b[1;36m$ ${trimmedCommand}\x1b[0m${targetNodeVersion ? `  \x1b[90m(Node v${targetNodeVersion})\x1b[0m` : ''}\n`
     });
 
     const appendCommandLog = (data) => {

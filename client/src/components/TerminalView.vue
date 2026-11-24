@@ -502,16 +502,22 @@ const stopWheelChaining = (event) => {
 const xtermThemes = {
   dark: {
     background: '#0f172a',
-    foreground: '#cbd5e1',
+    foreground: '#e2e8f0',
     cursor: '#38bdf8',
     selectionBackground: '#3b82f64d',
     cyan: '#22d3ee',
+    brightCyan: '#67e8f9',
     yellow: '#facc15',
+    brightYellow: '#fde047',
     red: '#f87171',
+    brightRed: '#fca5a5',
     green: '#4ade80',
+    brightGreen: '#86efac',
     blue: '#60a5fa',
+    brightBlue: '#93c5fd',
     magenta: '#e879f9',
-    brightBlack: '#64748b'
+    brightMagenta: '#f0abfc',
+    brightBlack: '#94a3b8'
   },
   light: {
     background: '#ffffff',
@@ -519,12 +525,18 @@ const xtermThemes = {
     cursor: '#2563eb',
     selectionBackground: '#3b82f633',
     cyan: '#0e7490',
+    brightCyan: '#155e75',
     yellow: '#b45309',
+    brightYellow: '#92400e',
     red: '#b91c1c',
+    brightRed: '#991b1b',
     green: '#15803d',
-    blue: '#2563eb',
+    brightGreen: '#166534',
+    blue: '#1d4ed8',
+    brightBlue: '#1e3a8a',
     magenta: '#7e22ce',
-    brightBlack: '#64748b'
+    brightMagenta: '#6b21a8',
+    brightBlack: '#475569'
   }
 };
 // 每次返回新对象：xterm 对 theme 这类对象选项按引用判断变更

@@ -209,8 +209,8 @@
           <div class="flex gap-2">
             <input
               :ref="(el) => setCommandInputRef(p.path, el)"
-              :value="p.commandRunning ? p.runningCommand : getCommandInput(p.path)"
-              :disabled="p.commandRunning"
+              :value="getCommandInput(p.path)"
+              :placeholder="p.commandRunning ? '正在执行：' + p.runningCommand : ''"
               @input="handleCommandInput(p.path, $event.target.value)"
               @keydown.enter="onCommandEnter($event, p)"
               @keydown.up="onCommandHistory($event, p, -1)"
@@ -218,12 +218,7 @@
               type="text"
               spellcheck="false"
               autocomplete="off"
-              :class="[
-                'flex-1 px-3 py-2 text-xs font-mono rounded border focus:outline-none transition',
-                p.commandRunning
-                  ? 'text-amber-300 bg-gray-900/60 border-amber-600/40 cursor-not-allowed'
-                  : 'text-gray-200 bg-gray-900 border-gray-700 focus:border-cyan-500'
-              ]"
+              class="flex-1 px-3 py-2 text-xs font-mono rounded border focus:outline-none transition text-gray-200 bg-gray-900 border-gray-700 placeholder:text-amber-400/70 focus:border-cyan-500"
             >
             <button
               @click="handleRunCommand(p)"
