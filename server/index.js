@@ -2201,12 +2201,17 @@ const cleanup = ({ exitProcess = false } = {}) => {
       killProcessTree(child, key);
     }
 
-    setTimeout(() => {
+    // nginx 以 daemon 方式运行（父进程是 launchd），不显式停止会留在后台继续监听端口
+    const stopNginx = Promise.resolve(nginxRuntime.stop()).catch((error) => {
+      console.error('⚠️ 退出前停止 nginx 失败:', error && error.message ? error.message : error);
+    });
+
+    Promise.all([stopNginx, new Promise((done) => setTimeout(done, 600))]).then(() => {
       if (exitProcess) {
         process.exit(0);
       }
       resolve();
-    }, 600);
+    });
   });
 
   return cleanupPromise;

@@ -27,6 +27,7 @@ let mainWindow;
 let tray = null;
 let isQuitting = false;
 let hasRequestedCleanup = false;
+let hasFinishedQuitCleanup = false;
 let appBaseUrl = '';
 let serverStartPromise = null;
 
@@ -290,9 +291,19 @@ app.on('ready', () => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
   isQuitting = true;
-  shutdownManagedProcesses();
+  if (hasFinishedQuitCleanup) return;
+
+  // 清理是异步的（停止 nginx 要等子进程结束），先拦下退出，完成后再真正退出
+  event.preventDefault();
+  Promise.race([
+    shutdownManagedProcesses(),
+    new Promise((done) => setTimeout(done, 5000))
+  ]).finally(() => {
+    hasFinishedQuitCleanup = true;
+    app.quit();
+  });
 });
 
 app.on('window-all-closed', () => {
