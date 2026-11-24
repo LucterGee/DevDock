@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Copy, Plus, Search, X } from 'lucide-vue-next'
 import type { NginxRoute, NginxVariable } from '../../utils/nginx'
+import { useEscapeKey } from '../../utils/useEscapeKey'
 
 const props = defineProps<{
   variables: NginxVariable[]
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   save: [variables: NginxVariable[]]
   close: []
 }>()
+
+useEscapeKey(() => emit('close'))
 
 type Row = NginxVariable & { key: number }
 

@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref, watch, nextTick, computed, onBeforeUnmount } from 'vue';
 import { isImeComposing } from '../utils/ime';
+import { useEscapeKey } from '../utils/useEscapeKey';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -39,6 +40,7 @@ const userQuestion = ref('');
 // --- 执行修复状态 ---
 const isFixing = ref(false);
 const isFullscreen = ref(false);
+useEscapeKey(() => { showAiModal.value = false; isFullscreen.value = false; }, () => showAiModal.value);
 const fixSteps = ref([]);  // { type:'file'|'cmd', label, path?, search?, replace?, command?, status, output }
 
 // 全屏时禁止外层滚动

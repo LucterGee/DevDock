@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="closeDialog" @keydown.esc="closeDialog" tabindex="-1" ref="backdrop">
+  <div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="closeDialog" tabindex="-1" ref="backdrop">
     <div class="w-full max-w-5xl bg-surface border border-gray-700 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[80vh] max-h-[760px]">
 
       <div class="flex items-center justify-between p-4 border-b border-gray-700 bg-surface-raised">
@@ -785,6 +785,7 @@ import { Settings, Target, Timer, Plus, Pencil, Check, AlertTriangle, Moon, Sun,
 import { useAiConfig } from '../utils/useAiConfig';
 import { useTheme } from '../utils/useTheme';
 import { socket } from '../utils/socket';
+import { useEscapeKey } from '../utils/useEscapeKey';
 
 const props = defineProps({ visible: Boolean });
 const secretStorageAvailable = ref(true);
@@ -1108,6 +1109,8 @@ const closeDialog = () => {
   applyFormData();
   emit('close');
 };
+
+useEscapeKey(closeDialog, () => props.visible);
 
 const handleDelete = async () => {
   const ok = await window.$confirm('确定要删除吗？', '警告', {

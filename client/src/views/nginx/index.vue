@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Braces, Download, FileCode, FolderOpen, Pencil, Plus, Play, RotateCw, Save, Search, Settings, ShieldCheck, Square, Trash2, Upload, X } from 'lucide-vue-next'
 import { ensureHomeDir, toDisplayPath } from '../../utils/pathDisplay'
+import { useEscapeKey } from '../../utils/useEscapeKey'
 import RouteEditor from './RouteEditor.vue'
 import VariablesDialog from './VariablesDialog.vue'
 import {
@@ -345,6 +346,7 @@ const exportConfig = () => run(async () => {
 
 
 const settingsOpen = ref(false)
+useEscapeKey(() => { settingsOpen.value = false }, () => settingsOpen.value)
 const nginxSettings = ref<any>(null)
 const defaultHttpConfig = ref('')
 const settingsDraft = ref({
@@ -355,6 +357,7 @@ const settingsDraft = ref({
 
 // --- 全局配置独立编辑层 ---
 const httpConfigOpen = ref(false)
+useEscapeKey(() => { httpConfigOpen.value = false }, () => httpConfigOpen.value)
 const httpConfigDraft = ref('')
 const httpConfigRef = ref<HTMLTextAreaElement | null>(null)
 const lineNumberRef = ref<HTMLElement | null>(null)

@@ -314,6 +314,7 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue';
 import { isImeComposing } from '../utils/ime';
+import { useEscapeKey } from '../utils/useEscapeKey';
 import TerminalView from './TerminalView.vue'
 import { callKuyepClaude } from '../utils/ai' // 引入通用的 AI 工具
 import { FolderOpen, Sparkles, Skull, Loader2 } from 'lucide-vue-next';
@@ -483,6 +484,7 @@ const handleRunCommand = (project) => {
 
 // Git 状态
 const showGitModal = ref(false);
+useEscapeKey(() => { showGitModal.value = false; }, () => showGitModal.value);
 const isGenerating = ref(false);
 const isCommitting = ref(false);
 const commitMessage = ref('');

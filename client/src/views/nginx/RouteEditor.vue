@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { Braces, Plus, X } from 'lucide-vue-next'
 import type { NginxRoute, NginxVariable } from '../../utils/nginx'
+import { useEscapeKey } from '../../utils/useEscapeKey'
 
 const props = defineProps<{
   route: NginxRoute
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   save: [route: NginxRoute]
   close: []
 }>()
+
+useEscapeKey(() => emit('close'))
 
 type TargetField = 'proxyPass' | 'referer'
 

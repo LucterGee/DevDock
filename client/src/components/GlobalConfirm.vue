@@ -45,8 +45,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useConfirmState, handleAction } from '../utils/confirm';
+import { useEscapeKey } from '../utils/useEscapeKey';
 
 const state = useConfirmState();
+// Esc 等同于取消
+useEscapeKey(() => handleAction(false), () => state.visible);
 
 const confirmBtnClass = computed(() => {
   if (state.type === 'error') return 'bg-red-600 hover:bg-red-500';
