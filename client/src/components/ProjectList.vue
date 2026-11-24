@@ -51,6 +51,23 @@
           </div>
 
           <div class="flex items-center gap-1 shrink-0">
+            <div v-if="devScriptOf(p)" class="flex items-center rounded transition hover:bg-gray-700">
+              <button
+                @click.stop="handleDevClick(p)"
+                :title="(isDevRunning(p) ? '停止开发：' : '启动开发：') + devScriptOf(p)"
+                class="rounded-l p-1.5 transition"
+                :class="isDevRunning(p) ? 'text-green-400' : 'text-gray-500 hover:text-green-400'"
+              >
+                <Play class="h-3.5 w-3.5" />
+              </button>
+              <button
+                @click.stop="openDevPicker(p)"
+                title="选择开发命令"
+                class="rounded-r py-1.5 pl-0.5 pr-1.5 text-gray-600 transition hover:text-gray-300"
+              >
+                <ChevronDown class="h-3 w-3" />
+              </button>
+            </div>
             <button
               @click.stop="$emit('open-folder', p.path)"
               title="在资源管理器中打开"
@@ -325,6 +342,40 @@
       </div>
     </div>
 
+    <div v-if="pickerProject" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" @mousedown.self="closeDevPicker">
+      <div class="w-full max-w-sm overflow-hidden rounded-lg border border-gray-700 bg-surface shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-700 bg-surface-raised p-4">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-100">
+            <Play class="h-4 w-4 text-green-400" />选择开发命令
+          </h3>
+          <button class="px-2 text-gray-400 transition hover:text-gray-100" @click="closeDevPicker">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div class="max-h-80 overflow-y-auto p-2">
+          <button
+            class="mb-1 flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs transition hover:bg-surface-hover"
+            :class="pickerProject.devScriptOverride ? 'text-gray-200' : 'text-green-400'"
+            @click="setDevScript(pickerProject, null)"
+          >
+            <span class="min-w-0 flex-1 truncate">自动（{{ devScriptOf({ ...pickerProject, devScriptOverride: null }) }}）</span>
+            <span v-if="!pickerProject.devScriptOverride" class="shrink-0 text-[10px] text-gray-500">当前</span>
+          </button>
+          <div class="my-1 border-t border-gray-700"></div>
+          <button
+            v-for="key in Object.keys(pickerProject.scripts || {})"
+            :key="key"
+            class="flex w-full items-center gap-2 rounded px-3 py-2 text-left font-mono text-xs transition hover:bg-surface-hover"
+            :class="key === devScriptOf(pickerProject) ? 'text-green-400' : 'text-gray-200'"
+            @click="setDevScript(pickerProject, key)"
+          >
+            <span class="min-w-0 flex-1 truncate">{{ key }}</span>
+            <span v-if="key === devScriptOf(pickerProject)" class="shrink-0 text-[10px] text-gray-500">当前</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <GitBranchDialog
       v-if="branchProject"
       :project-path="branchProject.path"
@@ -341,7 +392,7 @@ import { useEscapeKey } from '../utils/useEscapeKey';
 import TerminalView from './TerminalView.vue'
 import GitBranchDialog from './GitBranchDialog.vue'
 import { callKuyepClaude } from '../utils/ai' // 引入通用的 AI 工具
-import { FolderOpen, Sparkles, Skull, Loader2, GitBranch } from 'lucide-vue-next';
+import { FolderOpen, Sparkles, Skull, Loader2, GitBranch, Play, ChevronDown } from 'lucide-vue-next';
 import { socket } from "../utils/socket";
 import { useAiConfig } from '../utils/useAiConfig';
 
@@ -374,7 +425,8 @@ const emit = defineEmits([
   'open-file',
   'toggle-hide',
   'open-wechat-devtools',
-  'node-version-change'
+  'node-version-change',
+  'stop-script'
 ])
 
 const commandInputs = ref({})
@@ -510,6 +562,54 @@ const handleRunCommand = (project) => {
 const showGitModal = ref(false);
 // 分支管理弹窗对应的项目；为 null 时不显示
 const branchProject = ref(null);
+// --- 开发快捷按钮 ---
+const devPickerPath = ref('')
+
+// 绑定的脚本：手动配置优先，否则按 dev → 含 dev → 第一个 自动猜
+const devScriptOf = (project) => {
+  const scripts = Object.keys(project.scripts || {})
+  if (!scripts.length) return ''
+  const override = project.devScriptOverride
+  if (override && scripts.includes(override)) return override
+  if (scripts.includes('dev')) return 'dev'
+  const withDev = scripts.find((key) => key.toLowerCase().includes('dev'))
+  return withDev || scripts[0]
+}
+
+const isDevRunning = (project) => {
+  const script = devScriptOf(project)
+  return Boolean(script && project.runningScripts?.[script])
+}
+
+const handleDevClick = (project) => {
+  const script = devScriptOf(project)
+  if (!script) return
+  if (project.runningScripts?.[script]) emit('stop-script', project, script)
+  else emit('run', project, script)
+}
+
+const openDevPicker = (project) => { devPickerPath.value = project.path }
+const closeDevPicker = () => { devPickerPath.value = '' }
+
+const pickerProject = computed(() =>
+  (props.projects || []).find((project) => project.path === devPickerPath.value) || null
+)
+
+useEscapeKey(closeDevPicker, () => Boolean(pickerProject.value))
+
+// script 传空表示清除手动配置，回到自动识别
+const setDevScript = (project, script) => {
+  socket.emit('config:load', 'dev_script_by_project', (stored) => {
+    const next = { ...(stored || {}) }
+    if (script) next[project.path] = script
+    else delete next[project.path]
+    socket.emit('config:save', { key: 'dev_script_by_project', value: next })
+    const target = (props.projects || []).find((item) => item.path === project.path)
+    if (target) target.devScriptOverride = script || null
+    closeDevPicker()
+  })
+}
+
 const copyProjectPath = async (projectPath) => {
   if (!navigator?.clipboard?.writeText) {
     window.$toast?.warning?.('当前环境不支持复制');

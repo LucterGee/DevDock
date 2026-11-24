@@ -382,6 +382,12 @@ const handleNodeVersionChange = (p, version) => {
   })
 }
 
+// 只停某个脚本（开发快捷按钮用），不动该项目其它脚本
+const handleStopScript = (p, script) => {
+  socket.emit('stop-task', p.name, script)
+  if (p.runningScripts) p.runningScripts[script] = false
+}
+
 const handleStop = (p) => {
   socket.emit('stop-task', p.name)
   // 乐观更新 UI
@@ -534,6 +540,7 @@ const toggleHide = (p) => {
         :tunnel-active-project-path="tunnelConfig.activeProjectPath || ''"
         @run="handleRun"
         @stop="handleStop"
+        @stop-script="handleStopScript"
         @run-command="handleRunCommand"
         @stop-command="handleStopCommand"
         @open-folder="(path) => socket.emit('open-project-folder', path)"

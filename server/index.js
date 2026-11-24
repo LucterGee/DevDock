@@ -1064,6 +1064,7 @@ if ($folder) { $folder.Self.Path }
   const enrichProjects = (projects) => {
     const config = readConfigFile();
     const overrides = config.node_version_overrides || {};
+    const devScripts = config.dev_script_by_project || {};
     const tunnelConfig = normalizeTunnelConfig(config[TUNNEL_CONFIG_KEY]);
     const manualProjectPorts = tunnelConfig.projectPorts || {};
 
@@ -1109,6 +1110,8 @@ if ($folder) { $folder.Self.Path }
         ...p,
         runningScripts,
         nodeVersionOverride: (override && override !== 'system') ? override : null,
+        // 开发快捷按钮绑定的脚本；为空时前端自动猜
+        devScriptOverride: devScripts[p.path] || null,
         effectiveNodeVersion,
         nodeVersionSource,
         detectedAppPort: autoPortInfo.port || null,
@@ -1323,9 +1326,10 @@ if ($folder) { $folder.Self.Path }
 
   // 3. 停止任务
   // --- 4. 停止任务 (修复版) ---
-  socket.on('stop-task', (projectName) => {
-    console.log(`🛑 [收到指令] 请求停止项目: ${projectName}`);
-    
+  // script 可选：传了就只停该脚本，不传则停该项目的全部脚本
+  socket.on('stop-task', (projectName, script) => {
+    console.log(`🛑 [收到指令] 请求停止: ${projectName}${script ? ':' + script : '（全部）'}`);
+
     // 1. 先把 Map 转成数组，防止在遍历时修改 Map 导致循环中断
     const allTasks = Array.from(processes.entries());
     let found = false;
@@ -1334,6 +1338,7 @@ if ($folder) { $folder.Self.Path }
         // key 的格式是 "项目名:脚本名" (例如 "VueAdmin:dev")
         // 所以我们检查 key 是否以 "VueAdmin:" 开头
         if (key.startsWith(`${projectName}:`)) {
+            if (script && key !== `${projectName}:${script}`) continue;
             found = true;
             const scriptName = key.split(':')[1];
             console.log(`   - 匹配到任务: ${key} (PID: ${child.pid})，正在终止...`);
