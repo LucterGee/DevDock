@@ -191,8 +191,8 @@
           <div class="flex items-center mb-1 text-xs whitespace-nowrap">
             <span class="w-8 text-gray-400">CPU</span>
             <div class="flex-1 h-1.5 mx-2 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                class="h-full transition-all duration-300 bg-red-500" 
+              <div
+                class="h-full transition-all duration-300 bg-red-500"
                 :style="{ width: Math.min(stats[p.path].cpu, 100) + '%' }"
               ></div>
             </div>
@@ -201,8 +201,8 @@
           <div class="flex items-center text-xs whitespace-nowrap">
             <span class="w-8 text-gray-400">MEM</span>
             <div class="flex-1 h-1.5 mx-2 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-              class="h-full transition-all duration-300 bg-blue-500" 
+              <div
+              class="h-full transition-all duration-300 bg-blue-500"
               :style="{ width: calcMemPercent(stats[p.path].memory) + '%' }"
               ></div>
             </div>
@@ -282,7 +282,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
           </button>
         </div>
-        
+
         <div v-if="isGenerating" class="flex flex-col items-center justify-center h-32 space-y-3">
           <div class="w-8 h-8 border-4 border-purple-500 rounded-full border-t-transparent animate-spin"></div>
           <p class="text-sm text-gray-400">正在分析代码变更...</p>
@@ -295,7 +295,7 @@
             class="w-full p-3 mb-4 font-mono text-sm text-gray-200 bg-gray-900 border border-gray-600 rounded focus:border-purple-500 focus:outline-none"
             placeholder="生成的提交信息将显示在这里..."
           ></textarea>
-          
+
           <div class="flex items-center gap-2 mb-3 text-xs text-gray-500">
             <span>由</span>
             <span class="text-purple-400">{{ gitModelConfig.name || 'AI' }}</span>
@@ -562,13 +562,13 @@ const handleAiCommit = (p) => {
   commitMessage.value = '';
 
   // 1. 请求后端获取 diff
-  socket.emit('git:get-diff', { projectPath: p.path }, async ({ diff, error }) => {
+  socket.emit('git:get-diff', { projectPath: p.path }, async ({ diff, error, recentMessages }) => {
     if (error) {
       $toast.warning('获取 Git 变更失败，请确认该项目是一个 Git 仓库');
       showGitModal.value = false;
       return;
     }
-    
+
     if (!diff || diff.trim() === '') {
       commitMessage.value = 'chore: no changes detected';
       isGenerating.value = false;
@@ -577,22 +577,29 @@ const handleAiCommit = (p) => {
 
     // 2. 发送给 AI
     try {
-      const systemPrompt = `你是一个资深代码提交助手。
-      请根据用户的 git diff 内容，生成一条符合 Angular 规范的 Commit Message。
-      格式要求：<type> <emoji>(<scope>): <subject>
-      type 与 emoji 的对应关系：
-      - feat ✨  - fix 🐛  - docs 📝  - style 💄
-      - refactor ♻️  - perf ⚡️  - test ✅  - build 📦
-      - ci 👷  - chore 🔧  - revert ⏪
-      示例：feat ✨(auth): 新增登录页面
-      规则：
-      1. 只返回 Message 文本，不要包含 Markdown 代码块。
-      2. 语言使用中文。
-      3. 保持简练，subject 不超过 50 字。`;
+      const samples = Array.isArray(recentMessages) && recentMessages.length
+        ? recentMessages.map((line) => '- ' + line).join('\n')
+        : '（该仓库暂无提交记录）';
+
+      const systemPrompt = `你是一个资深代码提交助手。请根据 git diff 生成一条 Commit Message。
+
+以下是该仓库最近的提交记录，只用于判断格式与风格：
+${samples}
+
+规则：
+1. 严格沿用上面记录里的格式：type、scope、emoji、标点、语言都照此。
+   记录里没有用 emoji 就不要用；记录里普遍省略 scope 就跟着省略；
+   记录里括号前没有空格就不要加空格。
+   记录为空时使用 <type>(<scope>): <subject>，不加 emoji。
+2. type 只用 fix / feat / chore / style / refactor / docs / build / perf / ci。
+3. 只输出一行 subject，不要正文、不要列表。
+4. subject 简洁说明做了什么，控制在 50 字以内；多处改动用中文分号「；」连接。
+5. 只返回 Message 文本本身，不要 Markdown 代码块，不要任何解释。`;
 
       const gitConfig = getSceneConfig('git');
       const result = await callKuyepClaude(diff, systemPrompt, gitConfig?.id);
-      commitMessage.value = result.replace(/`/g, '').trim(); // 清理一下可能的多余符号
+      // 只要第一行，避免模型偶尔仍返回正文
+      commitMessage.value = String(result || '').replace(/`/g, '').trim().split('\n')[0].trim();
     } catch (e) {
       commitMessage.value = `feat: update code\n\n(AI 生成失败: ${e.message})`;
     } finally {
@@ -605,7 +612,7 @@ const handleAiCommit = (p) => {
 const confirmCommit = () => {
   if (!commitMessage.value) return;
   isCommitting.value = true;
-  
+
   socket.emit('git:commit', {
     projectPath: currentGitProject.value.path,
     message: commitMessage.value,

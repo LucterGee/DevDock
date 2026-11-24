@@ -1677,18 +1677,27 @@ if ($folder) { $folder.Self.Path }
   });
 
   socket.on('git:get-diff', ({ projectPath }, callback) => {
-    // 获取未暂存和已暂存的所有变更
-    // 限制 3000 字符，防止 Token 爆炸
-    exec('git diff HEAD', { cwd: projectPath, maxBuffer: 1024 * 1024 }, (err, stdout) => {
-      if (err) {
-        // 可能是新仓库没有 HEAD，尝试 git status
-        exec('git status -s', { cwd: projectPath }, (e, statusOut) => {
-          callback({ diff: statusOut || '', error: null });
-        });
-      } else {
-        const diff = stdout.length > 4000 ? stdout.slice(0, 4000) + '\n...(截断)' : stdout;
-        callback({ diff: diff, error: null });
-      }
+    // 最近提交只用于让 AI 判断该仓库的提交格式（有无 emoji、有无 scope、标点习惯），
+    // 不参与内容生成，所以取 subject 即可
+    exec('git log -20 --pretty=format:%s', { cwd: projectPath }, (logErr, logOut) => {
+      const recentMessages = logErr
+        ? []
+        : String(logOut || '').split('\n').map((line) => line.trim()).filter(Boolean);
+
+      const reply = (diff) => callback({ diff, error: null, recentMessages });
+
+      // 获取未暂存和已暂存的所有变更
+      // 限制 4000 字符，防止 Token 爆炸
+      exec('git diff HEAD', { cwd: projectPath, maxBuffer: 1024 * 1024 }, (err, stdout) => {
+        if (err) {
+          // 可能是新仓库没有 HEAD，尝试 git status
+          exec('git status -s', { cwd: projectPath }, (e, statusOut) => {
+            reply(statusOut || '');
+          });
+        } else {
+          reply(stdout.length > 4000 ? stdout.slice(0, 4000) + '\n...(截断)' : stdout);
+        }
+      });
     });
   });
 
