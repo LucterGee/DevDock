@@ -1,5 +1,6 @@
 <template>
-  <div class="fixed top-8 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none">
+  <!-- 顶部留出页面头部的高度，避免挡住「校验配置」「重载」这类操作按钮 -->
+  <div class="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none">
     
     <TransitionGroup name="toast">
       <div 
