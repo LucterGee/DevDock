@@ -33,10 +33,10 @@ const clone = (route: NginxRoute): NginxRoute => ({
     referer: target.referer || ''
   })),
   headers: {
-    httpVersion: route.headers?.httpVersion !== false,
+    httpVersion: route.headers?.httpVersion === true,
     host: route.headers?.host === true,
-    upgrade: route.headers?.upgrade !== false,
-    connection: route.headers?.connection !== false
+    upgrade: route.headers?.upgrade === true,
+    connection: route.headers?.connection === true
   },
   others: (route.others || []).map((item) => ({ name: item.name || '', value: item.value || '' })),
   rawBody: route.rawBody || ''

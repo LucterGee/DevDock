@@ -197,9 +197,9 @@ const emptyRoute = (): NginxRoute => ({
   kind: 'proxy',
   activeTargetId: '',
   targets: [{ id: 'target-1', label: '', proxyPass: '', referer: '' }],
-  // Host 默认不设置：留空时 nginx 用 $proxy_host（上游域名），
-  // 设成 $host 会把客户端地址传给上游，按虚拟主机匹配的外部站点会返回 503
-  headers: { httpVersion: true, host: false, upgrade: true, connection: true },
+  // 固定头默认全部不勾选：按需勾选，避免把客户端 Host 传给上游、
+  // 或在不支持 WebSocket 的上游上强加 Upgrade/Connection
+  headers: { httpVersion: false, host: false, upgrade: false, connection: false },
   others: [],
   rawBody: ''
 })
