@@ -147,15 +147,15 @@
             @click="emit('open-wechat-devtools', p)"
             :disabled="!canOpenWechatDevtools(p)"
             :title="getWechatDevtoolsTooltip(p)"
-            class="flex items-center gap-1 px-3 py-1 text-xs font-bold transition border rounded border-emerald-700/50"
-            :class="canOpenWechatDevtools(p) ? 'text-emerald-200 bg-emerald-900/30 hover:bg-emerald-600 hover:text-white' : 'text-gray-500 bg-gray-900/40 cursor-not-allowed opacity-70'"
+            class="flex items-center gap-1 px-3 py-1 text-xs font-bold transition border rounded border-gray-600 bg-gray-800"
+            :class="canOpenWechatDevtools(p) ? 'text-emerald-200 hover:bg-gray-700' : 'text-gray-500 cursor-not-allowed opacity-70'"
           >
             <span>W</span> 微信工具
           </button>
 
           <button
             @click="handleAiCommit(p)"
-            class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-purple-300 transition border rounded bg-purple-900/30 hover:bg-purple-600 hover:text-white border-purple-800/50"
+            class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-purple-300 transition border rounded border-gray-600 bg-gray-800 hover:bg-gray-700"
             title="AI 生成提交信息并提交"
           >
             <Sparkles class="w-3.5 h-3.5" /> Git
@@ -174,7 +174,7 @@
             v-if="hasRunningScripts(p)"
             @click="$emit('stop', p)"
             title="强制杀死进程"
-            class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-red-400 transition border rounded bg-red-900/30 hover:bg-red-600 hover:text-white border-red-800/50"
+            class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-red-400 transition border rounded border-gray-600 bg-gray-800 hover:bg-gray-700"
           >
             <Skull class="w-3.5 h-3.5" /> KILL
           </button>

@@ -80,16 +80,23 @@ html.theme-light {
   /* 浅色下 200/300/400 档强调色在浅底上对比度不足（如「Git」按钮的紫字），
      统一加深一档；这些色只作文字/图标用，加深不影响语义。 */
   --color-purple-300: #7e22ce;
+  --color-purple-400: #7e22ce;
   --color-emerald-200: #047857;
   --color-emerald-300: #059669;
+  --color-red-300: #b91c1c;
   --color-red-400: #b91c1c;
   --color-cyan-200: #0e7490;
   --color-cyan-300: #0891b2;
   --color-amber-300: #b45309;
+  --color-amber-400: #b45309;
   --color-green-400: #15803d;
   --color-green-500: #16a34a;
   --color-blue-400: #2563eb;
+  --color-yellow-300: #a16207;
+  --color-yellow-400: #a16207;
   --color-yellow-500: #ca8a04;
+  --color-sky-300: #0369a1;
+  --color-sky-400: #0284c7;
 }
 
 /* 浅色下不使用阴影：浅底上的投影观感偏脏，改用边框区分层次。
