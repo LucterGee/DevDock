@@ -34,7 +34,7 @@ const clone = (route: NginxRoute): NginxRoute => ({
   })),
   headers: {
     httpVersion: route.headers?.httpVersion !== false,
-    host: route.headers?.host !== false,
+    host: route.headers?.host === true,
     upgrade: route.headers?.upgrade !== false,
     connection: route.headers?.connection !== false
   },
