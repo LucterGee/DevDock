@@ -1,4 +1,4 @@
-const { execFile } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 
 const DEFAULT_TIMEOUT = 20000;
 const FETCH_TIMEOUT = 15000;
@@ -74,4 +74,18 @@ const createBranch = async (projectPath, branch) => {
   return name;
 };
 
-module.exports = { listBranches, checkoutBranch, createBranch };
+// 卡片展示用：同步读取当前分支，非 git 仓库或出错时返回空串
+const readCurrentBranch = (projectPath) => {
+  try {
+    return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd: projectPath,
+      encoding: 'utf8',
+      timeout: 3000,
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+  } catch (error) {
+    return '';
+  }
+};
+
+module.exports = { listBranches, checkoutBranch, createBranch, readCurrentBranch };

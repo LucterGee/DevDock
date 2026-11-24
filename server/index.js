@@ -1640,6 +1640,15 @@ if ($folder) { $folder.Self.Path }
 
   // 1. 获取 Git 变更 (用于发给 AI)
   // --- 分支管理 ---
+  // 卡片上的当前分支：批量读取，避免逐个往返
+  socket.on('git:current-branches', ({ projectPaths } = {}, callback) => {
+    const branches = {};
+    for (const projectPath of Array.isArray(projectPaths) ? projectPaths : []) {
+      branches[projectPath] = gitBranches.readCurrentBranch(projectPath);
+    }
+    callback({ success: true, branches });
+  });
+
   socket.on('git:branches', async ({ projectPath, fetch } = {}, callback) => {
     try {
       const result = await gitBranches.listBranches(projectPath, { fetch: fetch !== false });

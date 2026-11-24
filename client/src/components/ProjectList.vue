@@ -163,10 +163,11 @@
 
           <button
             @click="openBranchDialog(p)"
-            class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-sky-300 transition border rounded bg-sky-900/30 hover:bg-sky-600 hover:text-white border-sky-800/50"
+            class="flex max-w-[180px] items-center gap-1 rounded border border-gray-600 bg-gray-800 px-2 py-1 font-mono text-[10px] text-gray-300 transition hover:bg-gray-700 hover:text-white"
             title="切换或新建分支"
           >
-            <GitBranch class="w-3.5 h-3.5" /> 分支
+            <GitBranch class="h-3 w-3 shrink-0" />
+            <span class="truncate">{{ branchNames[p.path] || '分支' }}</span>
           </button>
 
           <button
@@ -321,13 +322,13 @@
       v-if="branchProject"
       :project-path="branchProject.path"
       @close="closeBranchDialog"
-      @changed="closeBranchDialog"
+      @changed="handleBranchChanged(branchProject?.path); closeBranchDialog()"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import { isImeComposing } from '../utils/ime';
 import { useEscapeKey } from '../utils/useEscapeKey';
 import TerminalView from './TerminalView.vue'
@@ -504,6 +505,28 @@ const showGitModal = ref(false);
 const branchProject = ref(null);
 const openBranchDialog = (project) => { branchProject.value = project; };
 const closeBranchDialog = () => { branchProject.value = null; };
+
+// 各项目当前分支，用于卡片展示；切换分支后单独刷新
+const branchNames = ref({});
+
+const refreshBranchNames = () => {
+  const paths = (props.projects || []).map((project) => project.path);
+  if (!paths.length) return;
+  socket.emit('git:current-branches', { projectPaths: paths }, (result) => {
+    if (!result || result.success === false) return;
+    branchNames.value = result.branches || {};
+  });
+};
+
+watch(() => props.projects, refreshBranchNames, { immediate: true, deep: false });
+
+const handleBranchChanged = (projectPath) => {
+  socket.emit('git:current-branches', { projectPaths: [projectPath] }, (result) => {
+    if (result && result.success !== false) {
+      branchNames.value = { ...branchNames.value, ...(result.branches || {}) };
+    }
+  });
+};
 useEscapeKey(() => { showGitModal.value = false; }, () => showGitModal.value);
 const isGenerating = ref(false);
 const isCommitting = ref(false);
