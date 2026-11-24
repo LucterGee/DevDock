@@ -54,8 +54,14 @@
             <div v-if="devScriptOf(p)" class="flex items-center gap-0.5">
               <button
                 @click.stop="openDevPicker(p)"
-                :title="'当前开发脚本：' + devScriptOf(p) + '（点击更换）'"
-                class="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[10px] text-gray-400 transition hover:bg-gray-700 hover:text-gray-200"
+                :disabled="isDevRunning(p)"
+                :title="isDevRunning(p)
+                  ? '运行中不可更改脚本，请先停止'
+                  : '当前开发脚本：' + devScriptOf(p) + '（点击更换）'"
+                class="flex items-center gap-1 rounded px-1.5 py-1 font-mono text-[10px] transition"
+                :class="isDevRunning(p)
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-gray-400 hover:bg-gray-700 hover:text-gray-200'"
               >
                 <span class="max-w-[80px] truncate">{{ devScriptOf(p) }}</span>
                 <ChevronDown class="h-3 w-3 shrink-0" />
@@ -64,9 +70,10 @@
                 @click.stop="handleDevClick(p)"
                 :title="(isDevRunning(p) ? '停止开发：' : '启动开发：') + devScriptOf(p)"
                 class="rounded p-1.5 transition"
-                :class="isDevRunning(p) ? 'text-green-400' : 'text-gray-500 hover:text-green-400'"
+                :class="isDevRunning(p) ? 'text-red-400 hover:bg-gray-700 hover:text-red-300' : 'text-gray-500 hover:text-green-400'"
               >
-                <Play class="h-3.5 w-3.5" />
+                <Square v-if="isDevRunning(p)" class="h-3.5 w-3.5" />
+                <Play v-else class="h-3.5 w-3.5" />
               </button>
             </div>
             <button
@@ -393,7 +400,7 @@ import { useEscapeKey } from '../utils/useEscapeKey';
 import TerminalView from './TerminalView.vue'
 import GitBranchDialog from './GitBranchDialog.vue'
 import { callKuyepClaude } from '../utils/ai' // 引入通用的 AI 工具
-import { FolderOpen, Sparkles, Skull, Loader2, GitBranch, Play, ChevronDown } from 'lucide-vue-next';
+import { FolderOpen, Sparkles, Skull, Loader2, GitBranch, Play, Square, ChevronDown } from 'lucide-vue-next';
 import { socket } from "../utils/socket";
 import { useAiConfig } from '../utils/useAiConfig';
 
@@ -426,8 +433,7 @@ const emit = defineEmits([
   'open-file',
   'toggle-hide',
   'open-wechat-devtools',
-  'node-version-change',
-  'stop-script'
+  'node-version-change'
 ])
 
 const commandInputs = ref({})
@@ -585,11 +591,16 @@ const isDevRunning = (project) => {
 const handleDevClick = (project) => {
   const script = devScriptOf(project)
   if (!script) return
-  if (project.runningScripts?.[script]) emit('stop-script', project, script)
+  // 停止复用已有的 KILL 链路，底层同样是 killProcessTree
+  if (project.runningScripts?.[script]) emit('stop', project)
   else emit('run', project, script)
 }
 
-const openDevPicker = (project) => { devPickerPath.value = project.path }
+const openDevPicker = (project) => {
+  // 运行中不允许换脚本，避免界面显示与实际运行的脚本不一致
+  if (isDevRunning(project)) return
+  devPickerPath.value = project.path
+}
 const closeDevPicker = () => { devPickerPath.value = '' }
 
 const pickerProject = computed(() =>

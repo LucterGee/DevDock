@@ -1326,9 +1326,8 @@ if ($folder) { $folder.Self.Path }
 
   // 3. 停止任务
   // --- 4. 停止任务 (修复版) ---
-  // script 可选：传了就只停该脚本，不传则停该项目的全部脚本
-  socket.on('stop-task', (projectName, script) => {
-    console.log(`🛑 [收到指令] 请求停止: ${projectName}${script ? ':' + script : '（全部）'}`);
+  socket.on('stop-task', (projectName) => {
+    console.log(`🛑 [收到指令] 请求停止项目: ${projectName}`);
 
     // 1. 先把 Map 转成数组，防止在遍历时修改 Map 导致循环中断
     const allTasks = Array.from(processes.entries());
@@ -1338,7 +1337,6 @@ if ($folder) { $folder.Self.Path }
         // key 的格式是 "项目名:脚本名" (例如 "VueAdmin:dev")
         // 所以我们检查 key 是否以 "VueAdmin:" 开头
         if (key.startsWith(`${projectName}:`)) {
-            if (script && key !== `${projectName}:${script}`) continue;
             found = true;
             const scriptName = key.split(':')[1];
             console.log(`   - 匹配到任务: ${key} (PID: ${child.pid})，正在终止...`);
