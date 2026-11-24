@@ -45,6 +45,7 @@ const conflict = computed(() => conflicts.value.find((item) => item.id === selec
 // --- 路由拖拽排序 ---
 const dragId = ref('')
 const dragOverId = ref('')
+const dragOverPos = ref<'before' | 'after'>('before')
 // 搜索时列表是子集，拖拽会打乱真实顺序，因此禁用
 const canDrag = computed(() => !search.value.trim())
 
@@ -55,21 +56,30 @@ const onRouteDragStart = (route: NginxRoute, event: DragEvent) => {
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
 }
 
+// 按拖拽方向决定落点：往下拖插到目标之后，往上拖插到目标之前。
+// 这样「拖到某一行上」一定会换位，不会因为落在上半区而看起来没反应。
 const onRouteDragOver = (route: NginxRoute) => {
-  if (!canDrag.value || !dragId.value || dragId.value === route.id) return
+  if (!canDrag.value || !dragId.value) return
+  const from = routes.value.findIndex((item) => item.id === dragId.value)
+  const index = routes.value.findIndex((item) => item.id === route.id)
+  if (from < 0 || index < 0 || index === from) {
+    dragOverId.value = ''
+    return
+  }
   dragOverId.value = route.id
+  dragOverPos.value = from < index ? 'after' : 'before'
 }
 
 const onRouteDragEnd = () => {
   dragId.value = ''
   dragOverId.value = ''
+  dragOverPos.value = 'before'
 }
 
-const onRouteDrop = (target: NginxRoute) => {
-  const from = routes.value.findIndex((item) => item.id === dragId.value)
-  const to = routes.value.findIndex((item) => item.id === target.id)
-  onRouteDragEnd()
-  if (from < 0 || to < 0 || from === to) return
+const applyOrder = (from: number, insertAt: number) => {
+  let to = insertAt
+  if (from < to) to -= 1
+  if (from === to) return
 
   const next = [...routes.value]
   const [moved] = next.splice(from, 1)
@@ -80,6 +90,36 @@ const onRouteDrop = (target: NginxRoute) => {
     await nginxCall('nginx:routes:reorder', { ids: next.map((item) => item.id) })
     await load()
   })
+}
+
+// 整个列表区域都能接收放置：按指针位置算出插入点，
+// 拖到行间空白、首行上方或末行下方都不会落空
+const onListDrop = (event: DragEvent) => {
+  const id = dragId.value
+  onRouteDragEnd()
+  if (!id) return
+
+  const from = routes.value.findIndex((item) => item.id === id)
+  if (from < 0) return
+
+  const container = event.currentTarget as HTMLElement | null
+  const rows = Array.from(container?.querySelectorAll('[data-route-id]') || []) as HTMLElement[]
+  if (!rows.length) return
+
+  // 找指针落在哪一行上
+  let hovered = -1
+  rows.forEach((row, index) => {
+    const rect = row.getBoundingClientRect()
+    if (event.clientY >= rect.top && event.clientY <= rect.bottom) hovered = index
+  })
+  // 落在行间空白时按上下位置决定
+  if (hovered < 0) {
+    const first = rows[0].getBoundingClientRect()
+    hovered = event.clientY < first.top ? 0 : rows.length - 1
+  }
+  if (hovered === from) return
+
+  applyOrder(from, from < hovered ? hovered + 1 : hovered)
 }
 
 const filtered = computed(() => {
@@ -468,7 +508,7 @@ onMounted(() => run(load))
           </div>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="min-h-0 flex-1 overflow-y-auto" @dragover.prevent @drop.prevent="onListDrop">
           <div
             v-for="route in filtered"
             :key="route.id"
@@ -478,13 +518,14 @@ onMounted(() => run(load))
               route.id === selectedId ? 'bg-surface-hover' : '',
               canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
               route.id === dragId ? 'opacity-40' : '',
-              route.id === dragOverId ? 'border-t-2 border-t-blue-500' : ''
+              route.id === dragOverId && dragOverPos === 'before' ? 'shadow-[inset_0_2px_0_0_var(--color-blue-500)]' : '',
+              route.id === dragOverId && dragOverPos === 'after' ? 'shadow-[inset_0_-2px_0_0_var(--color-blue-500)]' : ''
             ]"
             @click="select(route.id)"
+            :data-route-id="route.id"
             @dragstart="onRouteDragStart(route, $event)"
             @dragover.prevent="onRouteDragOver(route)"
             @dragend="onRouteDragEnd"
-            @drop.prevent="onRouteDrop(route)"
           >
             <div class="min-w-0 flex-1">
               <div class="truncate font-mono text-xs text-gray-100" :title="route.path">{{ route.path }}</div>
