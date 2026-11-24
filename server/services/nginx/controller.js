@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const net = require('net');
-const { execFile } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 
 const { buildMainConfig, resolvePort } = require('./configBuilder');
 const { createNginxStore } = require('./routeStore');
@@ -65,6 +65,30 @@ const isProcessAlive = (pid) => {
   } catch (error) {
     return error.code === 'EPERM';
   }
+};
+
+// 取进程命令行，用来确认这个 pid 真的是 nginx。
+// Windows 拿不到完整命令行，退化为按镜像名判断。
+const readProcessCommand = (pid) => {
+  try {
+    if (process.platform === 'win32') {
+      const out = execFileSync('tasklist', ['/FI', 'PID eq ' + pid, '/FO', 'CSV', '/NH'], { encoding: 'utf8' });
+      return /nginx\.exe/i.test(out) ? 'nginx.exe' : '';
+    }
+    return execFileSync('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8' }).trim();
+  } catch (error) {
+    return '';
+  }
+};
+
+// nginx 是常驻 daemon，退出应用后仍在运行，pid 文件可能残留。
+// 只看「pid 有进程」会把复用了该 pid 的其它进程误判成 nginx，
+// 所以还要确认命令行是 nginx，且用的是本应用的 prefix 目录。
+const isNginxRunning = (pid, prefixDir) => {
+  if (!isProcessAlive(pid)) return false;
+  const command = readProcessCommand(pid);
+  if (!/nginx/i.test(command)) return false;
+  return prefixDir ? command.includes(prefixDir) : true;
 };
 
 // 探测 127.0.0.1 上是否已有监听。nginx 绑的是 *:port，若本机另有进程
@@ -185,7 +209,7 @@ const createNginxController = (options = {}) => {
     }
 
     const target = paths();
-    const running = isProcessAlive(readPid(target.pidPath));
+    const running = isNginxRunning(readPid(target.pidPath), target.prefixDir);
 
     if ((action === 'reload' || action === 'stop') && !running) {
       return { ok: false, code: 'NOT_RUNNING', error: 'nginx 未运行，无法执行该操作' };
@@ -230,7 +254,7 @@ const createNginxController = (options = {}) => {
     return {
       installed: binaryInstalled(),
       binaryPath: binaryPath(),
-      running: isProcessAlive(pid),
+      running: isNginxRunning(pid, target.prefixDir),
       pid,
       port: resolvePort(current.nginx),
       prefixDir: target.prefixDir,
