@@ -15,6 +15,7 @@ const appUpdater = require('./utils/appUpdater');
 const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveConfigPath } = require('./utils/appPaths');
 const gitBranches = require('./utils/gitBranches');
+const { resolveCloudflaredPath } = require('./utils/cloudflaredPath');
 const { expandHome } = require('./utils/pathUtils');
 const { isAvailable: isSecretStorageAvailable } = require('./utils/secretStore');
 const { openAiConfigList, sealAiConfigList, migratePlaintextSecrets } = require('./utils/aiSecrets');
@@ -672,8 +673,17 @@ const startCloudflared = (token) => {
     return { success: false, error: 'Cloudflare Tunnel token is empty' };
   }
 
+  // 用内置二进制，避免依赖用户机器上的 PATH
+  const binary = resolveCloudflaredPath();
+  if (!fs.existsSync(binary)) {
+    return {
+      success: false,
+      error: '未找到 cloudflared 可执行文件：' + binary + '\n开发模式下请先运行 npm run cloudflared:fetch 准备二进制。'
+    };
+  }
+
   try {
-    const child = spawn('cloudflared', ['tunnel', 'run', '--protocol', 'http2', '--token', trimmedToken], {
+    const child = spawn(binary, ['tunnel', 'run', '--protocol', 'http2', '--token', trimmedToken], {
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true
     });

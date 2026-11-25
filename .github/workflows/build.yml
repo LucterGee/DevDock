@@ -34,6 +34,11 @@ jobs:
           if [ "$RUNNER_OS" = "macOS" ]; then brew install nginx; fi
           node scripts/fetch-nginx.js
 
+      # 2.6 准备内置 cloudflared 二进制（从 Cloudflare 官方 Release 下载）
+      - name: Prepare bundled cloudflared
+        shell: bash
+        run: node scripts/fetch-cloudflared.js
+
       # 3. 安装前端依赖
       - name: Install Frontend Dependencies
         run: |
