@@ -685,6 +685,9 @@ const startCloudflared = (token) => {
   try {
     const child = spawn(binary, ['tunnel', 'run', '--protocol', 'http2', '--token', trimmedToken], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      // killProcessTree 用 process.kill(-pid) 杀整个进程组，
+      // 不 detached 就不是进程组组长，停止会静默失败并留下孤儿进程
+      detached: process.platform !== 'win32',
       windowsHide: true
     });
     cloudflaredProcess = child;
