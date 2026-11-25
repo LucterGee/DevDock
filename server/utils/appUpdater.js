@@ -83,7 +83,7 @@ const setup = () => {
       supported: false,
       enabled: false,
       status: 'disabled',
-      message: 'Auto update is only available in Electron desktop app.'
+      message: '仅打包后的桌面应用支持自动更新'
     });
     return cloneState();
   }
@@ -98,8 +98,8 @@ const setup = () => {
       supported: true,
       enabled: false,
       status: 'disabled',
-      error: e.message || 'Failed to load electron-updater.',
-      message: 'electron-updater is unavailable.'
+      error: e.message || '加载 electron-updater 失败',
+      message: 'electron-updater 不可用'
     });
     return cloneState();
   }
@@ -111,7 +111,7 @@ const setup = () => {
   if (!state.enabled) {
     updateState({
       status: 'disabled',
-      message: 'Development mode does not support automatic download/install.'
+      message: '开发模式不支持自动下载与安装'
     });
     return cloneState();
   }
@@ -127,7 +127,7 @@ const setup = () => {
       checking: true,
       status: 'checking',
       error: '',
-      message: 'Checking for updates...'
+      message: '正在检查更新…'
     });
   });
 
@@ -142,7 +142,7 @@ const setup = () => {
       releaseDate: String(info?.releaseDate || ''),
       status: state.installSupported ? 'downloading' : 'manual',
       error: '',
-      message: state.installSupported ? 'Update found. Downloading...' : '新版本需手动下载安装'
+      message: state.installSupported ? '发现新版本，正在下载…' : '发现新版本，需手动下载安装'
     });
   });
 
@@ -157,7 +157,7 @@ const setup = () => {
       releaseDate: '',
       status: 'no-update',
       error: '',
-      message: 'You are already on the latest version.'
+      message: '已是最新版本'
     });
   });
 
@@ -169,7 +169,7 @@ const setup = () => {
       progress: Number(progressObj?.percent || 0),
       status: 'downloading',
       error: '',
-      message: 'Downloading update package...'
+      message: '正在下载更新包…'
     });
   });
 
@@ -184,7 +184,7 @@ const setup = () => {
       releaseDate: String(info?.releaseDate || state.releaseDate || ''),
       status: 'downloaded',
       error: '',
-      message: 'Update downloaded. Restart to install.'
+      message: '更新已下载，重启后安装'
     });
   });
 
@@ -192,14 +192,14 @@ const setup = () => {
     updateState({
       checking: false,
       status: 'error',
-      error: err?.message || String(err || 'unknown error'),
-      message: 'Update failed.'
+      error: err?.message || String(err || '未知错误'),
+      message: '更新失败'
     });
   });
 
   updateState({
     status: 'idle',
-    message: 'Ready to check updates.'
+    message: '可以检查更新'
   });
 
   return cloneState();
@@ -216,14 +216,14 @@ const checkForUpdates = async () => {
     return {
       success: false,
       state: cloneState(),
-      error: state.message || 'Auto update is unavailable in current mode.'
+      error: state.message || '当前模式不支持自动更新'
     };
   }
   if (state.checking) {
     return {
       success: true,
       state: cloneState(),
-      message: 'Update check is already in progress.'
+      message: '正在检查更新，请稍候'
     };
   }
 
@@ -237,8 +237,8 @@ const checkForUpdates = async () => {
     updateState({
       checking: false,
       status: 'error',
-      error: e.message || 'checkForUpdates failed',
-      message: 'Update check failed.'
+      error: e.message || '检查更新调用失败',
+      message: '检查更新失败'
     });
     return {
       success: false,
@@ -299,7 +299,7 @@ const quitAndInstall = () => {
     return {
       success: false,
       state: cloneState(),
-      error: state.message || 'Auto update is unavailable.'
+      error: state.message || '自动更新不可用'
     };
   }
   if (!state.installSupported) {
@@ -313,7 +313,7 @@ const quitAndInstall = () => {
     return {
       success: false,
       state: cloneState(),
-      error: 'Update package is not downloaded yet.'
+      error: '更新包尚未下载完成'
     };
   }
 
