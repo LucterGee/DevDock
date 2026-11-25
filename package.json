@@ -16,7 +16,6 @@
     "weekly-report:mcp": "node packages/weekly-report-mcp/index.js",
     "startmenu": "electron . -- --show-menu",
     "nginx:fetch": "node scripts/fetch-nginx.js",
-    "cloudflared:fetch": "node scripts/fetch-cloudflared.js",
     "pack": "node scripts/build-electron.js --dir",
     "dist": "node scripts/build-electron.js"
   },
@@ -54,13 +53,6 @@
       }
     ],
     "extraResources": [
-      {
-        "from": "resources/cloudflared",
-        "to": "cloudflared",
-        "filter": [
-          "**/*"
-        ]
-      },
       {
         "from": "resources/nginx",
         "to": "nginx",

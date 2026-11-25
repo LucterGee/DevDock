@@ -13,7 +13,6 @@ dist-ssr
 *.local
 .pnpm-store/
 resources/nginx/
-resources/cloudflared/
 
 # Editor directories and files
 .vscode/*

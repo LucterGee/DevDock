@@ -8,7 +8,7 @@ import { useAiConfig } from '../../utils/useAiConfig';
 import { FolderOpen, RefreshCw } from 'lucide-vue-next';
 
 const showSettings = ref(false); // 控制弹窗显示
-const { tunnelConfig, wechatDevtoolsConfig } = useAiConfig();
+const { wechatDevtoolsConfig } = useAiConfig();
 const WORKSPACE_CONFIG_KEY = 'workspace_root_path';
 const HIDDEN_PROJECTS_CONFIG_KEY = 'hidden_projects_by_workspace';
 const LEGACY_HIDDEN_PROJECTS_KEY = 'hidden-projects';
@@ -26,13 +26,6 @@ const stats = ref({}) // 存放实时监控数据
 const installedNodeVersions = ref([]) // nvm 已安装的 Node 版本列表
 const nvmDetected = ref(false) // 是否检测到 nvm
 const hiddenProjectsStore = ref({})
-const tunnelState = ref({
-  gatewayPort: 26324,
-  gatewayRunning: false,
-  gatewayError: '',
-  activeTarget: null,
-  cloudflaredRunning: false
-})
 
 const normalizePath = (value = '') =>
   String(value || '')
@@ -203,12 +196,6 @@ onMounted(() => {
   socket.on('disconnect', (reason) => console.warn('❌ Socket断开:', reason))
   socket.on('reconnect', () => console.log('🔄 Socket重连成功'))
   socket.on('node:versions:changed', refreshNodeVersions)
-  socket.on('tunnel:state', (state) => {
-    if (state) tunnelState.value = state
-  })
-  socket.emit('tunnel:get-state', (state) => {
-    if (state) tunnelState.value = state
-  })
 })
 
 onUnmounted(() => {
@@ -217,7 +204,6 @@ onUnmounted(() => {
   socket.off('status-change')
   socket.off('log')
   socket.off('command:status-change')
-  socket.off('tunnel:state')
 })
 
 // --- 计算属性 ---
@@ -529,9 +515,6 @@ const toggleHide = (p) => {
         :installed-node-versions="installedNodeVersions"
         :nvm-detected="nvmDetected"
         :wechat-devtools-configured="wechatDevtoolsConfigured"
-        :tunnel-state="tunnelState"
-        :tunnel-public-domain="tunnelConfig.publicDomain || ''"
-        :tunnel-active-project-path="tunnelConfig.activeProjectPath || ''"
         @run="handleRun"
         @stop="handleStop"
         @run-command="handleRunCommand"

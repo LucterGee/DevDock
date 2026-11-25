@@ -10,7 +10,6 @@ import { socket } from './socket'; // 👈 引入刚才创建的 socket 单例
 const STORAGE_KEY_LIST = 'ai_config_list';
 const STORAGE_KEY_ACTIVE = 'ai_active_id';
 const STORAGE_KEY_SCENES = 'ai_scene_configs';
-const STORAGE_KEY_TUNNEL = 'ai_tunnel_config';
 const STORAGE_KEY_WECHAT_DEVTOOLS = 'wechat_devtools_config';
 const STORAGE_KEY_TERMINAL = 'terminal_config';
 const STORAGE_KEY_EDITOR = 'editor_config';
@@ -29,14 +28,6 @@ const DEFAULT_CONFIG: any = {
 const configList = ref([DEFAULT_CONFIG]);
 const activeId = ref('default');
 const sceneConfigs = ref<Record<string, string>>({ git: '', diagnosis: '', weeklyReport: '' });
-const tunnelConfig = ref({
-  token: '',
-  gatewayPort: 26324,
-  publicDomain: '',
-  autoSwitchOnRun: false,
-  projectPorts: {},
-  activeProjectPath: ''
-});
 const wechatDevtoolsConfig = ref({
   path: ''
 });
@@ -87,19 +78,6 @@ const init = () => {
   socket.emit('config:load', STORAGE_KEY_SCENES, (data: any) => {
     if (data && typeof data === 'object') {
       sceneConfigs.value = { git: '', diagnosis: '', weeklyReport: '', ...data };
-    }
-  });
-
-  socket.emit('config:load', STORAGE_KEY_TUNNEL, (data: any) => {
-    if (data && typeof data === 'object') {
-      tunnelConfig.value = {
-        token: typeof data.token === 'string' ? data.token : '',
-        gatewayPort: Number.isInteger(data.gatewayPort) ? data.gatewayPort : 26324,
-        publicDomain: typeof data.publicDomain === 'string' ? data.publicDomain : '',
-        autoSwitchOnRun: data.autoSwitchOnRun !== false,
-        projectPorts: data.projectPorts && typeof data.projectPorts === 'object' ? data.projectPorts : {},
-        activeProjectPath: typeof data.activeProjectPath === 'string' ? data.activeProjectPath : ''
-      };
     }
   });
 
@@ -162,12 +140,6 @@ watch(activeId, (newVal) => {
 watch(sceneConfigs, (newVal) => {
   if (isLoaded.value) {
     socket.emit('config:save', { key: STORAGE_KEY_SCENES, value: newVal });
-  }
-}, { deep: true });
-
-watch(tunnelConfig, (newVal) => {
-  if (isLoaded.value) {
-    socket.emit('config:save', { key: STORAGE_KEY_TUNNEL, value: newVal });
   }
 }, { deep: true });
 
@@ -237,7 +209,6 @@ export function useAiConfig() {
     activeId,
     activeConfig,
     sceneConfigs,
-    tunnelConfig,
     wechatDevtoolsConfig,
     editorConfig,
     terminalConfig,

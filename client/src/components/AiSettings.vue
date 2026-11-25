@@ -83,14 +83,6 @@
           <div class="flex-shrink-0 px-2 pb-2 border-t border-gray-700">
             <div class="px-2 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">集成</div>
             <div
-              @click="showTunnelView"
-              class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
-              :class="currentView === 'tunnel' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
-            >
-              <span class="text-sm">T</span>
-              <span class="text-sm font-medium">Tunnel</span>
-            </div>
-            <div
               @click="showNodeView"
               class="flex items-center gap-2 px-3 py-2 transition rounded cursor-pointer select-none"
               :class="currentView === 'node' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400 hover:bg-surface-hover'"
@@ -336,99 +328,6 @@
             </div>
           </template>
 
-          <!-- Tunnel 视图 -->
-          <template v-else-if="currentView === 'tunnel'">
-            <div class="flex-1 p-6 overflow-y-auto">
-              <div class="pb-2 mb-5 border-b border-gray-700">
-                <h4 class="text-base font-bold text-gray-100">Tunnel Config</h4>
-              </div>
-
-              <div class="space-y-4">
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">cloudflared Token</label>
-                  <input
-                    v-model="tunnelConfig.token"
-                    type="password"
-                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition"
-                    placeholder="Paste cloudflared tunnel run token"
-                  >
-                </div>
-
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">Public Domain</label>
-                  <input
-                    v-model="tunnelConfig.publicDomain"
-                    type="text"
-                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition"
-                    placeholder="e.g. https://dev.example.com"
-                  >
-                </div>
-
-                <div>
-                  <label class="block mb-1 text-xs text-gray-500">Gateway 端口</label>
-                  <input
-                    v-model.number="tunnelConfig.gatewayPort"
-                    type="number"
-                    min="1024"
-                    max="65535"
-                    class="w-full bg-surface-raised border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 font-mono focus:border-blue-500 focus:outline-none transition"
-                    placeholder="26324"
-                  >
-                </div>
-
-                <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    v-model="tunnelConfig.autoSwitchOnRun"
-                    class="w-4 h-4 bg-gray-700 border-gray-600 rounded text-blue-500 focus:ring-0"
-                  >
-                  运行项目脚本自动切换隧道映射
-                </label>
-
-                <div class="p-3 border border-gray-700 rounded bg-surface-raised text-xs text-gray-300 space-y-2">
-                  <div class="flex items-center justify-between">
-                    <span>Gateway</span>
-                    <span class="font-mono">127.0.0.1:{{ tunnelState.gatewayPort || 26324 }}</span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span>Gateway Status</span>
-                    <span :class="tunnelState.gatewayRunning ? 'text-green-400' : 'text-yellow-400'">
-                      {{ tunnelState.gatewayRunning ? 'RUNNING' : 'STOPPED' }}
-                    </span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span>Cloudflared</span>
-                    <span :class="tunnelState.cloudflaredRunning ? 'text-green-400' : 'text-gray-400'">
-                      {{ tunnelState.cloudflaredRunning ? 'RUNNING' : 'STOPPED' }}
-                    </span>
-                  </div>
-                  <div v-if="tunnelState.activeTarget?.projectName" class="pt-2 border-t border-gray-700">
-                    Active: {{ tunnelState.activeTarget.projectName }} :{{ tunnelState.activeTarget.port }}
-                  </div>
-                  <div v-if="tunnelState.gatewayError" class="text-red-400">
-                    {{ tunnelState.gatewayError }}
-                  </div>
-                </div>
-
-                <div class="flex gap-3">
-                  <button
-                    @click="handleTunnelStart"
-                    :disabled="tunnelState.cloudflaredRunning"
-                    class="px-4 py-2 text-xs font-bold text-white rounded bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50"
-                  >
-                    Start cloudflared
-                  </button>
-                  <button
-                    @click="handleTunnelStop"
-                    :disabled="!tunnelState.cloudflaredRunning"
-                    class="px-4 py-2 text-xs font-bold text-gray-100 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50"
-                  >
-                    Stop cloudflared
-                  </button>
-                </div>
-              </div>
-            </div>
-          </template>
 
           <!-- 开发工具视图 -->
           <template v-else-if="currentView === 'tool'">
@@ -794,7 +693,6 @@ const {
   activeId,
   sceneConfigs,
   activeConfig,
-  tunnelConfig,
   wechatDevtoolsConfig,
   editorConfig,
   terminalConfig,
@@ -806,7 +704,7 @@ const {
 
 const { themeMode } = useTheme();
 
-const currentView = ref('model'); // 'model' | 'scene' | 'tunnel' | 'tool' | 'appearance' | 'reminder' | 'app'
+const currentView = ref('model'); // 'model' | 'scene' | 'tool' | 'appearance' | 'reminder' | 'app'
 const currentEditId = ref(null);
 const formData = ref(null);
 const isCreating = ref(false);
@@ -826,14 +724,6 @@ const appUpdate = ref({
   error: '',
   lastCheckedAt: ''
 });
-const tunnelState = ref({
-  gatewayPort: 26324,
-  gatewayRunning: false,
-  gatewayError: '',
-  activeTarget: null,
-  cloudflaredRunning: false
-});
-
 // --- 终端设置 ---
 const terminalPresets = ref([]);
 const serverPlatform = ref('');
@@ -929,17 +819,6 @@ const showSceneView = () => {
   currentEditId.value = null;
   formData.value = null;
   isCreating.value = false;
-};
-
-const showTunnelView = () => {
-  applyFormData();
-  currentView.value = 'tunnel';
-  currentEditId.value = null;
-  formData.value = null;
-  isCreating.value = false;
-  socket.emit('tunnel:get-state', (state) => {
-    if (state) tunnelState.value = state;
-  });
 };
 
 const showAppView = () => {
@@ -1137,29 +1016,6 @@ const handleDelete = async () => {
 };
 
 // 每次打开弹窗，默认选中当前正在使用的那个
-const handleTunnelStart = () => {
-  const token = tunnelConfig.value?.token?.trim();
-  if (!token) {
-    $toast.warning('Please enter cloudflared token first');
-    return;
-  }
-  socket.emit('tunnel:start', { token }, ({ success, error }) => {
-    if (success) $toast.success('cloudflared started');
-    else $toast.error(error || 'Failed to start cloudflared');
-  });
-};
-
-const handleTunnelStop = () => {
-  socket.emit('tunnel:stop', ({ success, error }) => {
-    if (success) $toast.success('cloudflared stop signal sent');
-    else $toast.warning(error || 'cloudflared is not running');
-  });
-};
-
-const handleTunnelState = (state) => {
-  if (state) tunnelState.value = state;
-};
-
 const applyAppUpdateState = (payload) => {
   if (!payload) return;
   appUpdate.value = {
@@ -1209,10 +1065,8 @@ const installUpdateNow = () => {
 };
 
 onMounted(() => {
-  socket.on('tunnel:state', handleTunnelState);
   socket.on('app:update:state', applyAppUpdateState);
   socket.on('node:install:progress', handleNodeInstallProgress);
-  socket.emit('tunnel:get-state', handleTunnelState);
   socket.emit('ai:secret-storage', (result) => {
     secretStorageAvailable.value = result ? result.available !== false : true;
   });
@@ -1221,7 +1075,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  socket.off('tunnel:state', handleTunnelState);
   socket.off('app:update:state', applyAppUpdateState);
 });
 
@@ -1238,7 +1091,6 @@ watch(() => props.visible, (val) => {
     } else {
       handleCreateNew();
     }
-    socket.emit('tunnel:get-state', handleTunnelState);
     socket.emit('app:update:get-state', applyAppUpdateState);
   } else {
     document.body.style.overflow = '';

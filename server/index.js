@@ -12,10 +12,8 @@ const monitor = require('./utils/monitor');
 const nodeVersions = require('./utils/nodeVersions');
 const nodeManager = require('./services/node/manager');
 const appUpdater = require('./utils/appUpdater');
-const { createTunnelInitializer } = require('./utils/tunnelInitializer');
 const { resolveConfigPath } = require('./utils/appPaths');
 const gitBranches = require('./utils/gitBranches');
-const { resolveCloudflaredPath } = require('./utils/cloudflaredPath');
 const { expandHome } = require('./utils/pathUtils');
 const { isAvailable: isSecretStorageAvailable } = require('./utils/secretStore');
 const { openAiConfigList, sealAiConfigList, migratePlaintextSecrets } = require('./utils/aiSecrets');
@@ -83,26 +81,6 @@ appUpdater.onState((payload) => {
 // 存储运行中的子进程: Map<taskKey, ChildProcess>
 const processes = new Map();
 const commandProcesses = new Map();
-const TUNNEL_CONFIG_KEY = 'ai_tunnel_config';
-const DEFAULT_TUNNEL_GATEWAY_PORT = 26324;
-// 网关端口可配置：Cloudflare 后台的公共主机名需要指向这个端口
-const normalizeGatewayPort = (value) => {
-  const port = Number(value);
-  if (!Number.isInteger(port) || port < 1024 || port > 65535) return DEFAULT_TUNNEL_GATEWAY_PORT;
-  return port;
-};
-const DEFAULT_TUNNEL_HOST = '127.0.0.1';
-
-let tunnelGatewayServer = null;
-let cloudflaredProcess = null;
-let pendingCloudflaredAutoStartProjectPath = '';
-const tunnelGatewayState = {
-  port: DEFAULT_TUNNEL_GATEWAY_PORT,
-  running: false,
-  lastError: '',
-  activeTarget: null
-};
-
 // --- 工具函数 ---
 const killProcessTree = (child, taskKey) => {
   if (!child || !child.pid) return;
@@ -187,598 +165,6 @@ const emitCommandStatus = (projectPath, projectName, running, command = '') => {
 // 输入与输出的区分交给带颜色的命令行本身
 const formatCommandLogChunk = (chunk) => String(chunk || '');
 
-const normalizeTunnelConfig = (rawConfig) => {
-  const source = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
-  const projectPorts =
-    source.projectPorts && typeof source.projectPorts === 'object'
-      ? source.projectPorts
-      : {};
-
-  return {
-    gatewayPort: normalizeGatewayPort(source.gatewayPort),
-    token: typeof source.token === 'string' ? source.token : '',
-    publicDomain: typeof source.publicDomain === 'string' ? source.publicDomain : '',
-    autoSwitchOnRun: source.autoSwitchOnRun !== false,
-    projectPorts,
-    activeProjectPath: typeof source.activeProjectPath === 'string' ? source.activeProjectPath : ''
-  };
-};
-
-const readTunnelConfig = () => {
-  const allConfig = readConfigFile();
-  return normalizeTunnelConfig(allConfig[TUNNEL_CONFIG_KEY]);
-};
-
-const writeTunnelConfig = (nextConfig) => {
-  const allConfig = readConfigFile();
-  const normalized = normalizeTunnelConfig(nextConfig);
-  allConfig[TUNNEL_CONFIG_KEY] = normalized;
-  writeConfigFile(allConfig);
-  restartTunnelGatewayIfPortChanged(normalized.gatewayPort);
-};
-
-// 端口变化后重启网关使其生效
-const restartTunnelGatewayIfPortChanged = (nextPort) => {
-  if (!tunnelGatewayServer) return;
-  if (normalizeGatewayPort(nextPort) === tunnelGatewayState.port) return;
-  stopTunnelGatewayServer();
-  setTimeout(() => startTunnelGatewayServer(), 200);
-};
-
-const getTunnelStatePayload = () => ({
-  gatewayPort: tunnelGatewayState.port,
-  gatewayRunning: tunnelGatewayState.running,
-  gatewayError: tunnelGatewayState.lastError,
-  activeTarget: tunnelGatewayState.activeTarget,
-  cloudflaredRunning: !!cloudflaredProcess,
-  cloudflaredPid: cloudflaredProcess?.pid || null,
-  pendingCloudflaredAutoStartProjectPath
-});
-
-const broadcastTunnelState = () => {
-  io.emit('tunnel:state', getTunnelStatePayload());
-};
-
-const setPendingCloudflaredAutoStart = (projectPath = '') => {
-  pendingCloudflaredAutoStartProjectPath = projectPath || '';
-  broadcastTunnelState();
-};
-
-const clearPendingCloudflaredAutoStart = (projectPath = '') => {
-  if (!pendingCloudflaredAutoStartProjectPath) return;
-  if (
-    !projectPath ||
-    pendingCloudflaredAutoStartProjectPath.toLowerCase() === String(projectPath).toLowerCase()
-  ) {
-    pendingCloudflaredAutoStartProjectPath = '';
-    broadcastTunnelState();
-  }
-};
-
-const isValidPort = (value) => Number.isInteger(value) && value > 0 && value <= 65535;
-
-const readTextFileIfExists = (filePath) => {
-  try {
-    if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath, 'utf-8');
-    }
-  } catch (e) {}
-  return '';
-};
-
-const getPortFromMatches = (text, patterns) => {
-  if (!text) return null;
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (!match) continue;
-    const candidate = Number(match[1]);
-    if (isValidPort(candidate)) return candidate;
-  }
-  return null;
-};
-
-const getPortFromScript = (script = '') => {
-  return getPortFromMatches(script, [
-    /--port(?:=|\s+)(\d{2,5})/i,
-    /(?:^|\s)-p\s+(\d{2,5})(?:\s|$)/i,
-    /\bPORT=(\d{2,5})\b/i,
-    /\bset\s+PORT=(\d{2,5})\b/i
-  ]);
-};
-
-const stripAnsi = (text = '') => String(text).replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
-
-const getModeFromScriptCommand = (command = '') => {
-  const match = String(command || '').match(/--mode(?:=|\s+)([a-z0-9_-]+)/i);
-  return match?.[1] || '';
-};
-
-const detectPortFromEnvFiles = (projectPath, modeHint = '') => {
-  const mode = String(modeHint || '').trim();
-  const envFiles = mode
-    ? [
-        `.env.${mode}.local`,
-        `.env.${mode}`,
-        '.env.local',
-        '.env'
-      ]
-    : ['.env.development.local', '.env.development', '.env.local', '.env'];
-
-  for (const file of envFiles) {
-    const content = readTextFileIfExists(path.join(projectPath, file));
-    const port = getPortFromMatches(content, [
-      /^\s*(?:export\s+)?VITE_PORT\s*=\s*["']?(\d{2,5})["']?\s*$/m,
-      /^\s*(?:export\s+)?PORT\s*=\s*["']?(\d{2,5})["']?\s*$/m
-    ]);
-    if (isValidPort(port)) {
-      return { port, source: file };
-    }
-  }
-  return null;
-};
-
-const extractRuntimePortFromOutput = (output) => {
-  const text = stripAnsi(output);
-  // 只匹配前端开发服务器常见输出，避免并行脚本里的后端端口误触发
-  const candidate = getPortFromMatches(text, [
-    /\bLocal:\s*https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|[a-z0-9.-]+):(\d{2,5})/i,
-    /\bNetwork:\s*https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|[a-z0-9.-]+):(\d{2,5})/i
-  ]);
-  if (!isValidPort(candidate)) return null;
-  if (Number(candidate) === tunnelGatewayState.port) return null;
-  return Number(candidate);
-};
-
-const detectProjectAppPort = (
-  projectPath,
-  knownScripts = null,
-  activeScriptName = '',
-  options = {}
-) => {
-  const allowDefaultFallback = options.allowDefaultFallback !== false;
-  const includeEnvPort = options.includeEnvPort !== false;
-  const scripts = knownScripts || {};
-  const pkgPath = path.join(projectPath, 'package.json');
-  let pkg = null;
-  if (Object.keys(scripts).length === 0) {
-    try {
-      if (fs.existsSync(pkgPath)) {
-        pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-      }
-    } catch (e) {}
-  } else if (fs.existsSync(pkgPath)) {
-    try { pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')); } catch (e) {}
-  }
-
-  const scriptMap = Object.keys(scripts).length > 0 ? scripts : (pkg?.scripts || {});
-  const modeFromScript = (() => {
-    const candidates = [
-      activeScriptName,
-      'dev',
-      'start',
-      'serve',
-      'test',
-      'preview'
-    ].filter(Boolean);
-    for (const name of candidates) {
-      const cmd = scriptMap[name] || '';
-      const mode = getModeFromScriptCommand(cmd);
-      if (mode) return mode;
-    }
-    return '';
-  })();
-  const firstScriptPort = ['dev', 'start', 'serve', 'preview']
-    .map((key) => getPortFromScript(scriptMap[key] || ''))
-    .find((v) => isValidPort(v));
-  if (isValidPort(firstScriptPort)) {
-    return { port: firstScriptPort, source: 'script' };
-  }
-
-  const viteConfigFiles = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs', 'vite.config.cjs'];
-  for (const file of viteConfigFiles) {
-    const fullPath = path.join(projectPath, file);
-    const content = readTextFileIfExists(fullPath);
-    const port = getPortFromMatches(content, [
-      /server\s*:\s*\{[\s\S]*?\bport\s*:\s*(\d{2,5})/m,
-      /\bport\s*:\s*(\d{2,5})/m
-    ]);
-    if (isValidPort(port)) {
-      return { port, source: file };
-    }
-  }
-
-  const vueConfig = readTextFileIfExists(path.join(projectPath, 'vue.config.js'));
-  const vuePort = getPortFromMatches(vueConfig, [
-    /devServer\s*:\s*\{[\s\S]*?\bport\s*:\s*(\d{2,5})/m
-  ]);
-  if (isValidPort(vuePort)) {
-    return { port: vuePort, source: 'vue.config.js' };
-  }
-
-  const webpackFiles = ['webpack.config.js', 'webpack.dev.js', 'webpack.dev.conf.js'];
-  for (const file of webpackFiles) {
-    const content = readTextFileIfExists(path.join(projectPath, file));
-    const port = getPortFromMatches(content, [
-      /devServer\s*:\s*\{[\s\S]*?\bport\s*:\s*(\d{2,5})/m
-    ]);
-    if (isValidPort(port)) {
-      return { port, source: file };
-    }
-  }
-
-  const angularJson = readTextFileIfExists(path.join(projectPath, 'angular.json'));
-  const angularPort = getPortFromMatches(angularJson, [
-    /"port"\s*:\s*(\d{2,5})/m
-  ]);
-  if (isValidPort(angularPort)) {
-    return { port: angularPort, source: 'angular.json' };
-  }
-
-  if (includeEnvPort) {
-    const envPort = detectPortFromEnvFiles(projectPath, modeFromScript);
-    if (isValidPort(envPort?.port)) {
-      return envPort;
-    }
-  }
-
-  if (!allowDefaultFallback) {
-    return null;
-  }
-
-  const devScript = scriptMap.dev || '';
-  const startScript = scriptMap.start || '';
-  const mergedScripts = `${devScript}\n${startScript}`.toLowerCase();
-  const allDeps = {
-    ...(pkg?.dependencies || {}),
-    ...(pkg?.devDependencies || {})
-  };
-
-  if (mergedScripts.includes('ng serve') || allDeps['@angular/cli']) {
-    return { port: 4200, source: 'default:angular' };
-  }
-  if (mergedScripts.includes('vite') || allDeps.vite) {
-    return { port: 5173, source: 'default:vite' };
-  }
-  if (mergedScripts.includes('vue-cli-service serve') || allDeps['@vue/cli-service']) {
-    return { port: 8080, source: 'default:vue-cli' };
-  }
-  if (mergedScripts.includes('react-scripts start') || allDeps['react-scripts']) {
-    return { port: 3000, source: 'default:react' };
-  }
-  if (mergedScripts.includes('next dev') || allDeps.next) {
-    return { port: 3000, source: 'default:next' };
-  }
-  if (mergedScripts.includes('nuxt dev') || allDeps.nuxt || allDeps['nuxi']) {
-    return { port: 3000, source: 'default:nuxt' };
-  }
-  if (mergedScripts.includes('webpack serve')) {
-    return { port: 8080, source: 'default:webpack' };
-  }
-  if (mergedScripts.includes('flask run')) {
-    return { port: 5000, source: 'default:flask' };
-  }
-
-  return { port: 3000, source: 'default:common' };
-};
-
-const resolveTunnelTargetPort = (
-  projectPath,
-  explicitPort,
-  activeScriptName = '',
-  options = {}
-) => {
-  const allowDefaultFallback = options.allowDefaultFallback !== false;
-  const parsedExplicit = Number(explicitPort);
-  if (isValidPort(parsedExplicit)) return parsedExplicit;
-
-  const tunnelConfig = readTunnelConfig();
-  const parsedSaved = Number(tunnelConfig.projectPorts?.[projectPath]);
-  if (isValidPort(parsedSaved)) return parsedSaved;
-
-  const autoDetected = detectProjectAppPort(projectPath, null, activeScriptName, {
-    allowDefaultFallback
-  });
-  if (isValidPort(autoDetected?.port)) return autoDetected.port;
-  return null;
-};
-
-const setTunnelActiveTarget = ({ projectPath, projectName, port }) => {
-  const normalizedPort = Number(port);
-  if (!isValidPort(normalizedPort)) {
-    return { success: false, error: 'Target port must be between 1 and 65535.' };
-  }
-
-  const tunnelConfig = readTunnelConfig();
-  writeTunnelConfig({
-    ...tunnelConfig,
-    activeProjectPath: projectPath || ''
-  });
-
-  tunnelGatewayState.activeTarget = {
-    projectPath: projectPath || '',
-    projectName: projectName || (projectPath ? path.basename(projectPath) : ''),
-    host: DEFAULT_TUNNEL_HOST,
-    port: normalizedPort,
-    updatedAt: Date.now()
-  };
-  if (
-    pendingCloudflaredAutoStartProjectPath &&
-    String(pendingCloudflaredAutoStartProjectPath).toLowerCase() ===
-      String(projectPath || '').toLowerCase()
-  ) {
-    pendingCloudflaredAutoStartProjectPath = '';
-  }
-  broadcastTunnelState();
-  return { success: true, state: getTunnelStatePayload() };
-};
-
-const markTunnelPendingProject = ({ projectPath }) => {
-  const tunnelConfig = readTunnelConfig();
-  writeTunnelConfig({
-    ...tunnelConfig,
-    activeProjectPath: projectPath || ''
-  });
-
-  const currentPath = tunnelGatewayState.activeTarget?.projectPath || '';
-  if (currentPath !== (projectPath || '')) {
-    tunnelGatewayState.activeTarget = null;
-  }
-  broadcastTunnelState();
-};
-
-const clearTunnelActiveTarget = () => {
-  const tunnelConfig = readTunnelConfig();
-  writeTunnelConfig({
-    ...tunnelConfig,
-    activeProjectPath: ''
-  });
-  tunnelGatewayState.activeTarget = null;
-  clearPendingCloudflaredAutoStart();
-  broadcastTunnelState();
-};
-
-const writeUpgradeError = (socket, statusCode, message) => {
-  if (!socket || socket.destroyed) return;
-  socket.write(
-    `HTTP/1.1 ${statusCode} Error\r\n` +
-      'Connection: close\r\n' +
-      'Content-Type: text/plain; charset=utf-8\r\n' +
-      `Content-Length: ${Buffer.byteLength(message)}\r\n` +
-      '\r\n' +
-      message
-  );
-  socket.destroy();
-};
-
-const proxyGatewayHttpRequest = (req, res) => {
-  const target = tunnelGatewayState.activeTarget;
-  if (!target) {
-    res.statusCode = 503;
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.end(JSON.stringify({ success: false, error: 'No active tunnel target.' }));
-    return;
-  }
-
-  const proxyReq = http.request(
-    {
-      hostname: target.host,
-      port: target.port,
-      path: req.url,
-      method: req.method,
-      headers: {
-        ...req.headers,
-        host: `${target.host}:${target.port}`
-      }
-    },
-    (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
-      proxyRes.pipe(res);
-    }
-  );
-
-  proxyReq.on('error', (error) => {
-    res.statusCode = 502;
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.end(
-      JSON.stringify({
-        success: false,
-        error: `Proxy to ${target.host}:${target.port} failed`,
-        detail: error.message
-      })
-    );
-  });
-
-  req.pipe(proxyReq);
-};
-
-const proxyGatewayUpgradeRequest = (req, socket, head) => {
-  const target = tunnelGatewayState.activeTarget;
-  if (!target) {
-    writeUpgradeError(socket, 503, 'No active tunnel target.');
-    return;
-  }
-
-  const upstream = net.connect(target.port, target.host, () => {
-    const headers = { ...req.headers, host: `${target.host}:${target.port}` };
-    let rawRequest = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`;
-
-    for (const [key, value] of Object.entries(headers)) {
-      if (Array.isArray(value)) {
-        value.forEach((item) => {
-          rawRequest += `${key}: ${item}\r\n`;
-        });
-      } else if (value !== undefined) {
-        rawRequest += `${key}: ${value}\r\n`;
-      }
-    }
-    rawRequest += '\r\n';
-
-    upstream.write(rawRequest);
-    if (head && head.length > 0) {
-      upstream.write(head);
-    }
-    socket.pipe(upstream).pipe(socket);
-  });
-
-  upstream.on('error', (error) => {
-    writeUpgradeError(socket, 502, `Proxy upgrade failed: ${error.message}`);
-  });
-
-  socket.on('error', () => {
-    upstream.destroy();
-  });
-};
-
-const startTunnelGatewayServer = () => {
-  if (tunnelGatewayServer) return;
-
-  tunnelGatewayState.port = normalizeGatewayPort(readTunnelConfig().gatewayPort);
-
-  tunnelGatewayServer = http.createServer(proxyGatewayHttpRequest);
-  tunnelGatewayServer.on('upgrade', proxyGatewayUpgradeRequest);
-  tunnelGatewayServer.on('error', (error) => {
-    tunnelGatewayState.running = false;
-    tunnelGatewayState.lastError = error.code === 'EADDRINUSE'
-      ? `端口 ${tunnelGatewayState.port} 已被占用，请在设置中修改 Tunnel 网关端口`
-      : error.message;
-    console.error('[TunnelGateway] error:', tunnelGatewayState.lastError);
-    broadcastTunnelState();
-  });
-
-  tunnelGatewayServer.listen(tunnelGatewayState.port, DEFAULT_TUNNEL_HOST, () => {
-    tunnelGatewayState.running = true;
-    tunnelGatewayState.lastError = '';
-    console.log(`[TunnelGateway] listening on ${DEFAULT_TUNNEL_HOST}:${tunnelGatewayState.port}`);
-    broadcastTunnelState();
-  });
-};
-
-const stopTunnelGatewayServer = () => {
-  if (!tunnelGatewayServer) return;
-  tunnelGatewayServer.close(() => {
-    console.log('[TunnelGateway] closed');
-  });
-  tunnelGatewayServer = null;
-  tunnelGatewayState.running = false;
-  broadcastTunnelState();
-};
-
-const startCloudflared = (token) => {
-  if (cloudflaredProcess) {
-    return { success: false, error: 'cloudflared is already running', state: getTunnelStatePayload() };
-  }
-
-  const trimmedToken = (token || '').trim();
-  if (!trimmedToken) {
-    return { success: false, error: 'Cloudflare Tunnel token is empty' };
-  }
-
-  // 用内置二进制，避免依赖用户机器上的 PATH
-  const binary = resolveCloudflaredPath();
-  if (!fs.existsSync(binary)) {
-    return {
-      success: false,
-      error: '未找到 cloudflared 可执行文件：' + binary + '\n开发模式下请先运行 npm run cloudflared:fetch 准备二进制。'
-    };
-  }
-
-  try {
-    const child = spawn(binary, ['tunnel', 'run', '--protocol', 'http2', '--token', trimmedToken], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      // killProcessTree 用 process.kill(-pid) 杀整个进程组，
-      // 不 detached 就不是进程组组长，停止会静默失败并留下孤儿进程
-      detached: process.platform !== 'win32',
-      windowsHide: true
-    });
-    cloudflaredProcess = child;
-    broadcastTunnelState();
-
-    child.stdout.on('data', (chunk) => {
-      io.emit('tunnel:cloudflared-log', { type: 'stdout', data: chunk.toString() });
-    });
-    child.stderr.on('data', (chunk) => {
-      io.emit('tunnel:cloudflared-log', { type: 'stderr', data: chunk.toString() });
-    });
-    child.on('error', (error) => {
-      io.emit('tunnel:cloudflared-log', { type: 'error', data: error.message });
-    });
-    child.on('close', (code) => {
-      if (cloudflaredProcess === child) {
-        cloudflaredProcess = null;
-        io.emit('tunnel:cloudflared-log', { type: 'exit', data: `cloudflared exited with code ${code}` });
-        broadcastTunnelState();
-      }
-    });
-
-    return { success: true, state: getTunnelStatePayload() };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
-
-const stopCloudflared = () => {
-  if (!cloudflaredProcess) {
-    return { success: false, error: 'cloudflared is not running', state: getTunnelStatePayload() };
-  }
-
-  const current = cloudflaredProcess;
-  cloudflaredProcess = null;
-  killProcessTree(current, 'cloudflared');
-  broadcastTunnelState();
-  return { success: true, state: getTunnelStatePayload() };
-};
-
-const autoStartCloudflaredForProject = (projectName, projectPath) => {
-  const tunnelConfig = readTunnelConfig();
-  const token = (tunnelConfig.token || '').trim();
-  if (!token) {
-    io.emit('log', {
-      name: projectName,
-      data: '\n[Tunnel] cloudflared token is empty, skip auto start.\n'
-    });
-    return { success: false, error: 'token empty' };
-  }
-
-  if (cloudflaredProcess) {
-    clearPendingCloudflaredAutoStart(projectPath);
-    return { success: true, state: getTunnelStatePayload(), alreadyRunning: true };
-  }
-
-  const result = startCloudflared(token);
-  if (result.success) {
-    clearPendingCloudflaredAutoStart(projectPath);
-    io.emit('log', {
-      name: projectName,
-      data: '\n[Tunnel] cloudflared started after tunnel target is ready.\n'
-    });
-  } else {
-    io.emit('log', {
-      name: projectName,
-      data: `\n[Tunnel] Failed to start cloudflared: ${result.error || 'unknown error'}\n`
-    });
-  }
-  return result;
-};
-
-const restoreTunnelTargetFromConfig = () => {
-  const tunnelConfig = readTunnelConfig();
-  if (!tunnelConfig.activeProjectPath) return;
-
-  const restoredPort = resolveTunnelTargetPort(tunnelConfig.activeProjectPath);
-  if (!isValidPort(restoredPort)) return;
-
-  setTunnelActiveTarget({
-    projectPath: tunnelConfig.activeProjectPath,
-    projectName: path.basename(tunnelConfig.activeProjectPath),
-    port: restoredPort
-  });
-};
-
-const initializeTunnelServices = createTunnelInitializer({
-  startTunnelGatewayServer,
-  restoreTunnelTargetFromConfig
-});
-
 const scanRecursively = (currentPath, depth = 0) => {
   if (depth > 4) return [];
   const folderName = path.basename(currentPath);
@@ -797,17 +183,13 @@ if (['node_modules', '.git', 'dist', 'build', '.idea', '.vscode', 'public', 'uni
       // 检测项目所需的 Node 版本
       const detected = nodeVersions.detectProjectNodeVersion(currentPath);
       const resolved = detected ? nodeVersions.resolveNodeVersion(detected.raw) : null;
-      const appPortDetection = detectProjectAppPort(currentPath, pkg.scripts || {});
-
       return [{
         name: folderName,
         path: currentPath,
         runner: runner,
         scripts: pkg.scripts || {},
         detectedNodeVersion: detected,   // { raw, source } | null
-        resolvedNodeVersion: resolved,    // { version, exact } | null
-        detectedAppPort: appPortDetection?.port || null,
-        detectedAppPortSource: appPortDetection?.source || ''
+        resolvedNodeVersion: resolved     // { version, exact } | null
       }];
     } catch (e) { return []; }
   }
@@ -864,7 +246,6 @@ const nginxRuntime = createNginxRuntime();
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  socket.emit('tunnel:state', getTunnelStatePayload());
   socket.emit('app:update:state', appUpdater.getState());
 
   socket.on('app:get-version', (callback) => {
@@ -892,45 +273,6 @@ io.on('connection', (socket) => {
     callback?.(result);
   });
 
-  socket.on('tunnel:get-state', (callback) => {
-    if (typeof callback === 'function') callback(getTunnelStatePayload());
-  });
-
-  socket.on('tunnel:set-target', ({ projectPath, projectName, port } = {}, callback) => {
-    const resolvedPort = resolveTunnelTargetPort(projectPath, port);
-    if (!isValidPort(resolvedPort)) {
-      return callback?.({
-        success: false,
-        error: 'No valid tunnel port found for this project.',
-        state: getTunnelStatePayload()
-      });
-    }
-
-    const result = setTunnelActiveTarget({
-      projectPath,
-      projectName,
-      port: resolvedPort
-    });
-    callback?.(result);
-  });
-
-  socket.on('tunnel:clear-target', (callback) => {
-    clearTunnelActiveTarget();
-    callback?.({ success: true, state: getTunnelStatePayload() });
-  });
-
-  socket.on('tunnel:start', ({ token } = {}, callback) => {
-    const tunnelConfig = readTunnelConfig();
-    const effectiveToken = (token || tunnelConfig.token || '').trim();
-    const result = startCloudflared(effectiveToken);
-    if (result.success) clearPendingCloudflaredAutoStart();
-    callback?.(result);
-  });
-
-  socket.on('tunnel:stop', (callback) => {
-    const result = stopCloudflared();
-    callback?.(result);
-  });
 // 1. 弹窗选择文件夹
   // 仅返回所选目录，不触发项目扫描等副作用
   socket.on('dialog:select-directory', async (callback) => {
@@ -1078,8 +420,6 @@ if ($folder) { $folder.Self.Path }
     const config = readConfigFile();
     const overrides = config.node_version_overrides || {};
     const devScripts = config.dev_script_by_project || {};
-    const tunnelConfig = normalizeTunnelConfig(config[TUNNEL_CONFIG_KEY]);
-    const manualProjectPorts = tunnelConfig.projectPorts || {};
 
     return projects.map(p => {
       // 同步运行状态
@@ -1109,13 +449,6 @@ if ($folder) { $folder.Self.Path }
         nodeVersionSource = 'auto';
       }
 
-      const autoPortInfo = isValidPort(Number(p.detectedAppPort))
-        ? { port: Number(p.detectedAppPort), source: p.detectedAppPortSource || 'detected' }
-        : detectProjectAppPort(p.path, p.scripts || {});
-      const manualPort = Number(manualProjectPorts[p.path]);
-      const hasManualPort = isValidPort(manualPort);
-      const effectiveTunnelPort = hasManualPort ? manualPort : autoPortInfo.port;
-      const tunnelPortSource = hasManualPort ? 'manual' : 'auto';
       const commandEntry = commandProcesses.get(p.path);
       const isMiniProgram = hasWeChatProjectConfig(p.path);
 
@@ -1127,10 +460,6 @@ if ($folder) { $folder.Self.Path }
         devScriptOverride: devScripts[p.path] || null,
         effectiveNodeVersion,
         nodeVersionSource,
-        detectedAppPort: autoPortInfo.port || null,
-        detectedAppPortSource: autoPortInfo.source || '',
-        effectiveTunnelPort: isValidPort(effectiveTunnelPort) ? effectiveTunnelPort : null,
-        tunnelPortSource,
         isMiniProgram,
         commandRunning: !!commandEntry,
         runningCommand: commandEntry?.command || ''
@@ -1151,53 +480,6 @@ if ($folder) { $folder.Self.Path }
     if (processes.has(taskKey)) {
       console.warn(`⚠️ [start-task] 任务 ${taskKey} 已在运行中，忽略重复请求`);
       return;
-    }
-
-    const tunnelConfig = readTunnelConfig();
-    const autoSwitchEnabled = !!(tunnelConfig.autoSwitchOnRun && projectPath);
-    const hasManualTunnelPort = isValidPort(Number(tunnelConfig.projectPorts?.[projectPath]));
-    const strongPortInfo = projectPath
-      ? detectProjectAppPort(projectPath, null, script, {
-          allowDefaultFallback: false,
-          includeEnvPort: false
-        })
-      : null;
-    const hasStrongDetectedPort = isValidPort(Number(strongPortInfo?.port));
-    const allowRuntimeLogPortDetection =
-      autoSwitchEnabled && !hasManualTunnelPort && !hasStrongDetectedPort;
-
-    if (autoSwitchEnabled) {
-      if (hasManualTunnelPort) {
-        const manualPort = Number(tunnelConfig.projectPorts?.[projectPath]);
-        setTunnelActiveTarget({
-          projectPath,
-          projectName,
-          port: manualPort
-        });
-        autoStartCloudflaredForProject(projectName, projectPath);
-      } else if (hasStrongDetectedPort) {
-        setTunnelActiveTarget({
-          projectPath,
-          projectName,
-          port: Number(strongPortInfo.port)
-        });
-        autoStartCloudflaredForProject(projectName, projectPath);
-      } else {
-        // 仅剩默认兜底时，不立即切换，等待启动日志识别真实端口
-        markTunnelPendingProject({ projectPath });
-        setPendingCloudflaredAutoStart(projectPath);
-        if (cloudflaredProcess) {
-          stopCloudflared();
-          io.emit('log', {
-            name: projectName,
-            data: '\n[Tunnel] Port is unknown yet, cloudflared stopped and waiting for runtime port.\n'
-          });
-        }
-        io.emit('log', {
-          name: projectName,
-          data: '\n[Tunnel] Waiting for runtime port from startup logs...\n'
-        });
-      }
     }
 
     const currentRunner = runner || 'npm';
@@ -1270,51 +552,9 @@ if ($folder) { $folder.Self.Path }
 
     io.emit('status-change', { name: projectName, script, running: true });
 
-    let runtimeDetectedPort = null;
-    let runtimePortFallbackTimer = null;
-    if (allowRuntimeLogPortDetection) {
-      runtimePortFallbackTimer = setTimeout(() => {
-        if (runtimeDetectedPort) return;
-        if (!processes.has(taskKey)) return;
-        const fallbackPort = resolveTunnelTargetPort(projectPath, undefined, script, {
-          allowDefaultFallback: true
-        });
-        if (!isValidPort(fallbackPort)) return;
-
-        setTunnelActiveTarget({
-          projectPath,
-          projectName,
-          port: fallbackPort
-        });
-        io.emit('log', {
-          name: projectName,
-          data: `\n[Tunnel] Runtime port not found in logs, fallback to port ${fallbackPort}.\n`
-        });
-        autoStartCloudflaredForProject(projectName, projectPath);
-      }, 15000);
-    }
-
     const logHandler = (data) => {
       const text = data.toString();
       io.emit('log', { name: projectName, data: text });
-
-      if (!allowRuntimeLogPortDetection) return;
-      // 已识别到前端端口后不再反复切换，避免目标在前后端端口间抖动
-      if (runtimeDetectedPort) return;
-      const detectedPort = extractRuntimePortFromOutput(text);
-      if (!isValidPort(detectedPort)) return;
-      runtimeDetectedPort = detectedPort;
-      if (runtimePortFallbackTimer) {
-        clearTimeout(runtimePortFallbackTimer);
-        runtimePortFallbackTimer = null;
-      }
-
-      setTunnelActiveTarget({
-        projectPath,
-        projectName,
-        port: detectedPort
-      });
-      autoStartCloudflaredForProject(projectName, projectPath);
     };
     child.stdout.on('data', logHandler);
     child.stderr.on('data', logHandler);
@@ -1323,10 +563,6 @@ if ($folder) { $folder.Self.Path }
     });
 
     child.on('close', (code) => {
-      if (runtimePortFallbackTimer) {
-        clearTimeout(runtimePortFallbackTimer);
-        runtimePortFallbackTimer = null;
-      }
       if (processes.has(taskKey)) {
           // ✅ 进程退出，移除监控
           monitor.removeMonitor(taskKey);
@@ -1789,12 +1025,9 @@ if ($folder) { $folder.Self.Path }
       normalizedValue = normalizeTerminalConfig(value);
     } else if (key === AI_CONFIG_LIST_KEY) {
       normalizedValue = sealAiConfigList(value, allData[AI_CONFIG_LIST_KEY]);
-    } else if (key === TUNNEL_CONFIG_KEY) {
-      normalizedValue = normalizeTunnelConfig(value);
     }
     allData[key] = normalizedValue; // 更新对应的 key
     writeConfigFile(allData); // 写入硬盘
-    if (key === TUNNEL_CONFIG_KEY) restartTunnelGatewayIfPortChanged(normalizedValue.gatewayPort);
     console.log(`💾 保存配置 [${key}] Success`);
   });
 
@@ -2218,11 +1451,6 @@ const cleanup = ({ exitProcess = false } = {}) => {
   isCleaningUp = true;
 
   cleanupPromise = new Promise((resolve) => {
-    if (cloudflaredProcess) {
-      killProcessTree(cloudflaredProcess, 'cloudflared');
-    }
-    stopTunnelGatewayServer();
-
     for (const [key, child] of processes) {
       killProcessTree(child, key);
     }
@@ -2265,11 +1493,9 @@ app.get(/.*/, (req, res) => {
     }
 });
 if (require.main === module) {
-    initializeTunnelServices();
     server.listen(2117, () => console.log('Server running on 2117'));
 }
 
 server.cleanupManagedProcesses = () => cleanup({ exitProcess: false });
-server.initializeTunnelServices = initializeTunnelServices;
 
 module.exports = server;
